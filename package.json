@@ -9,6 +9,10 @@
     "tauri": "tauri dev"
   },
   "dependencies": {
+    "@tauri-apps/plugin-clipboard-manager": "^2.5.0",
+    "@tauri-apps/plugin-dialog": "^2.8.3",
+    "@tauri-apps/plugin-fs": "^2.7.1",
+    "@tauri-apps/plugin-notification": "^2.7.0",
     "localforage": "^1.10.0"
   },
   "devDependencies": {
