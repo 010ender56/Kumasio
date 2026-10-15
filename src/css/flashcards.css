@@ -9,6 +9,13 @@
     perspective: 1000px;
 }
 
+@media (max-width: 768px) {
+    .flashcard {
+        width: 90vw;
+        height: 70vh;
+    }
+}
+
 .flashcard-inner {
     position: relative;
     width: 100%;
@@ -102,9 +109,22 @@ img {
     transform: translateX(-50%);
 }
 
+@media (max-width: 768px) {
+    .controls, .rating-controls, .finished-screen {
+        width: 90vw;
+        bottom: 10vh;
+    }
+}
+
 .controls {
     justify-content: space-between;
     width: 25vw;
+}
+
+@media (max-width: 768px) {
+    .controls {
+        width: 80vw;
+    }
 }
 
 .rating-controls {
@@ -155,6 +175,7 @@ img {
 }
 
 .stat-label {
+    font-family: inter, sans-serif;
     font-size: 0.8rem;
     color: var(--muted);
     text-transform: uppercase;

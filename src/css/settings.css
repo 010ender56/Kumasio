@@ -12,6 +12,12 @@ body {
     align-items: start;
 }
 
+@media (max-width: 768px) {
+    .settings-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
 .settings-sidebar {
     display: flex;
     flex-direction: column;
@@ -82,6 +88,7 @@ body {
 }
 
 .setting-description {
+    font-family: inter, sans-serif;
     font-size: 0.8rem;
     color: var(--text-muted);
     margin-bottom: 12px;

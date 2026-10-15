@@ -243,7 +243,7 @@ export function initState(returnOnly = false) {
       
       defaultSide: "front", // "front" or "back" | for flashcards
       reducedMotion: false,
-      flipDirection: "vertical", // "vertical" or "horiztonal" | for flashcards
+      flipDirection: "vertical", // "vertical" or "horizontal" | for flashcards
 
       // keyboard shortcuts
       shortcuts: {

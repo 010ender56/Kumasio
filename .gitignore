@@ -1,4 +1,5 @@
 .stfolder/
 node_modules/
 todo\ dev.md
+src-tauri/
 flashcard-examples-for-importing.md

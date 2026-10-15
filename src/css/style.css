@@ -36,33 +36,73 @@
     color-scheme: dark;
 }
 
+@font-face {
+    font-family: merriweather;
+    src:
+        url("../assets/fonts/merriweather.ttf") format("truetype"),
+        local("Merriweather");
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: lora;
+    src:
+        url("../assets/fonts/lora.ttf") format("truetype"),
+        local("Lora");
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: inter;
+    src:
+        url("../assets/fonts/inter.ttf") format("truetype"),
+        local("Inter");
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
 * {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
-    font-family: Courier, sans-serif;
 }
 
 body {
     background-color: var(--bg);
     color: var(--text);
+    font-family: lora, sans-serif;
     padding: 20px 20px 20px 20px;
     animation: fadeIn 0.4s ease-out;
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(6px); }
-    to   { opacity: 1; transform: none; }
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html:focus-within { scroll-behavior: auto; }
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
+    html:focus-within {
+        scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
 }
 
 .wrapper {
@@ -71,6 +111,13 @@ body {
     display: grid;
     grid-template-columns: 320px 1fr;
     gap: 40px;
+}
+
+@media (max-width: 768px) {
+    .wrapper {
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
 }
 
 .panel {
@@ -95,26 +142,34 @@ header p {
 }
 
 p {
-    font-size: .85rem;
+    font-size: 0.85rem;
     margin-top: 4px;
 }
 
 .muted-text {
+    font-family: inter, sans-serif;
     color: var(--text-muted);
     display: inline;
     font-weight: 300;
     font-size: 14px;
 }
 
-h1, h2, h3, h4, h5, h6, p, span {
-  color: var(--text);
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+span {
+    color: var(--text);
 }
 
 input[type="text"],
 select,
 .btn {
-  height: 35px;
-  vertical-align: middle;
+    height: 35px;
+    vertical-align: middle;
 }
 
 .group {
@@ -124,6 +179,7 @@ select,
 }
 
 .group-title {
+    font-family: inter, sans-serif;
     font-size: 0.75rem;
     font-weight: 600;
     text-transform: uppercase;
@@ -133,12 +189,13 @@ select,
 }
 
 label {
+    font-family: inter, sans-serif;
     font-size: 0.85rem;
     cursor: pointer;
 }
 
 .label-normal {
-    font-weight: normal !important; /* figure out what's causing label weight override */
+    font-weight: normal !important; /* todo: figure out what's causing label weight override */
 }
 
 select,
@@ -151,7 +208,7 @@ input[type="text"] {
     color: var(--text);
     font-size: 0.85rem;
     outline: none;
-    transition: background .1s ease;
+    transition: background 0.1s ease;
 }
 
 select:hover,
@@ -207,16 +264,17 @@ input[type="radio"] {
     transition: background-color 75ms linear;
 }
 
-.btn-base, .cta, .btn, .danger {
+.btn-base,
+.cta,
+.btn,
+.danger {
     --btn-height: 36px;
     --btn-radius: 4px;
     --btn-font-size: 0.85rem;
     --btn-font-weight: 500;
-    --btn-transition: background-color 0.15s ease-in-out, 
-                      color 0.15s ease-in-out, 
-                      border-color 0.15s ease-in-out, 
-                      transform 0.05s ease-in-out,
-                      box-shadow 0.15s ease-in-out;
+    --btn-transition:
+        background-color 0.15s ease-in-out, color 0.15s ease-in-out, border-color 0.15s ease-in-out,
+        transform 0.05s ease-in-out, box-shadow 0.15s ease-in-out;
 
     display: inline-flex;
     align-items: center;
@@ -224,6 +282,7 @@ input[type="radio"] {
     height: var(--btn-height);
     padding: 0 16px;
     border-radius: var(--btn-radius);
+    font-family: inherit;
     font-size: var(--btn-font-size);
     font-weight: var(--btn-font-weight);
     cursor: pointer;
@@ -276,12 +335,16 @@ input[type="radio"] {
     transform: scale(0.98);
 }
 
-.cta:focus-visible, .btn:focus-visible, .danger:focus-visible {
+.cta:focus-visible,
+.btn:focus-visible,
+.danger:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
 }
 
-.cta:disabled, .btn:disabled, .danger:disabled {
+.cta:disabled,
+.btn:disabled,
+.danger:disabled {
     opacity: 0.6;
     cursor: not-allowed;
     pointer-events: none;
@@ -312,8 +375,7 @@ textarea {
     -webkit-appearance: none;
     width: 100%;
     height: 100%;
-    font-family: monospace;
-    white-space: pre;
+    font-family: lora, sans-serif;
     overflow-wrap: normal;
     color: var(--text);
     background: var(--card);
@@ -326,8 +388,8 @@ textarea {
 }
 
 .text-area {
-  white-space: pre-wrap;
-  overflow-wrap: break-word;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
 }
 
 code {
@@ -339,26 +401,28 @@ code {
 }
 
 kbd {
-  display: inline-block;
-  padding: 2px 6px;
-  margin-right: 5px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.85em;
-  font-weight: 600;
-  line-height: 1;
-  color: var(--text);
-  background-color: var(--surface);
-  border: 1px solid var(--border-main);
-  border-radius: 4px;
-  box-shadow: 0 2px 0 var(--border-main);
-  cursor: pointer;
-  user-select: none;
-  transition: transform 0.05s ease, box-shadow 0.05s ease;
+    display: inline-block;
+    padding: 2px 6px;
+    margin-right: 5px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.85em;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--text);
+    background-color: var(--surface);
+    border: 1px solid var(--border-main);
+    border-radius: 4px;
+    box-shadow: 0 2px 0 var(--border-main);
+    cursor: pointer;
+    user-select: none;
+    transition:
+        transform 0.05s ease,
+        box-shadow 0.05s ease;
 }
 
 kbd:active {
-  transform: translateY(2px);
-  box-shadow: 0 0 0 var(--border-main);
+    transform: translateY(2px);
+    box-shadow: 0 0 0 var(--border-main);
 }
 
 .theme-toggle {
@@ -380,7 +444,7 @@ kbd:active {
     color: var(--theme-icon);
 }
 
-input:checked+.theme-icon::before {
+input:checked + .theme-icon::before {
     content: "🌙";
 }
 
@@ -399,7 +463,9 @@ input:checked+.theme-icon::before {
     align-items: center;
     border-radius: 25px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    transition: background 0.25s ease, width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    transition:
+        background 0.25s ease,
+        width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     overflow: hidden;
     box-sizing: border-box;
 }
@@ -407,6 +473,7 @@ input:checked+.theme-icon::before {
 .top-bar:hover {
     opacity: 1;
     width: 300px;
+    max-width: 90vw;
     backdrop-filter: none;
     background-color: var(--card);
 }
@@ -432,7 +499,7 @@ input:checked+.theme-icon::before {
 
 .top-bar:hover .top-bar-content {
     opacity: 1;
-    transition-delay: .1s;
+    transition-delay: 0.1s;
 }
 
 .icon-btn {
@@ -443,7 +510,7 @@ input:checked+.theme-icon::before {
     width: fit-content;
     height: fit-content;
     border: none;
-    transition: transform .1s linear;
+    transition: transform 0.1s linear;
 }
 
 .icon-btn:hover {
@@ -451,7 +518,8 @@ input:checked+.theme-icon::before {
 }
 
 small {
-    font-size: .6rem;
+    font-family: inter, sans-serif;
+    font-size: 0.6rem;
     color: var(--muted);
 }
 
@@ -478,11 +546,11 @@ hr {
 }
 
 .separator:not(:empty)::before {
-    margin-right: .5em;
+    margin-right: 0.5em;
 }
 
 .separator:not(:empty)::after {
-    margin-left: .5em;
+    margin-left: 0.5em;
 }
 
 #colorOutput {
@@ -523,7 +591,7 @@ hr {
     background-color: transparent;
     color: var(--text);
     font-size: 25px;
-    transition: transform .1s ease-out;
+    transition: transform 0.1s ease-out;
 }
 
 #copy:hover {
@@ -546,7 +614,7 @@ hr {
     z-index: 9999;
     max-width: 80vw;
     opacity: 1;
-    transition: opacity .25s ease-out;
+    transition: opacity 0.25s ease-out;
     pointer-events: auto;
 }
 
@@ -557,40 +625,40 @@ hr {
 }
 
 .toast.hidden {
-  opacity: 0;
-  pointer-events: none;
+    opacity: 0;
+    pointer-events: none;
 }
 
 .container-404 {
-  position: absolute;
-  top: 40%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  border: 2px dashed var(--border-main);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  border-radius: 6px;
-  width: 80vw;
-  min-height: 40px;
-  padding: 40px;
-  text-align: center;
+    position: absolute;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border: 2px dashed var(--border-main);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    border-radius: 6px;
+    width: 80vw;
+    min-height: 40px;
+    padding: 40px;
+    text-align: center;
 }
 
 .container-404 h1 {
-  letter-spacing: 2px;
-  font-size: 35px;
-  margin: 0 0 10px 0;
+    letter-spacing: 2px;
+    font-size: 35px;
+    margin: 0 0 10px 0;
 }
 
 .container-404 p {
-  color: var(--text);
-  font-size: 14px;
-  margin: 0;
+    color: var(--text);
+    font-size: 14px;
+    margin: 0;
 }
 
-    div[id="complete-view"] {
+div[id="complete-view"] {
     text-align: center;
     display: flex;
     flex-direction: column;
@@ -620,7 +688,12 @@ hr {
 }
 
 .skeleton {
-    background: linear-gradient(90deg, var(--surface-lighter) 25%, var(--surface) 50%, var(--surface-lighter) 75%);
+    background: linear-gradient(
+        90deg,
+        var(--surface-lighter) 25%,
+        var(--surface) 50%,
+        var(--surface-lighter) 75%
+    );
     background-size: 200% 100%;
     animation: skeleton-loading 1.5s infinite;
     border-radius: 4px;
@@ -628,8 +701,12 @@ hr {
 }
 
 @keyframes skeleton-loading {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
 }
 
 .toggle-group {
@@ -645,7 +722,7 @@ hr {
     border: none;
     background: transparent;
     color: var(--text-muted);
-    font-family: inherit;
+    font-family: inter, sans-serif;
     font-size: 0.8rem;
     cursor: pointer;
     border-radius: 6px;

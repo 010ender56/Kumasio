@@ -34,9 +34,9 @@ const cramUndoBtn = document.getElementById("cram-undo-btn");
 let state;
 let currentSetID = new URLSearchParams(window.location.search).get("set");
 let currentCardIndex = 0;
-let cramQueue = []; // Stores card IDs for cram mode
-let sessionAttempts = 0; // Track total cards seen in current session
-let sessionHistory = []; // Track actions for undoing in cram mode
+let cramQueue = []; // stores card IDs for cram mode
+let sessionAttempts = 0; // track total cards seen in current session
+let sessionHistory = []; // track actions for undoing in cram mode
 
 const mode = new URLSearchParams(window.location.search).get("mode") || "review"; // default to review mode
 /* 

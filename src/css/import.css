@@ -44,7 +44,7 @@
     border: 1px solid var(--border);
     background-color: var(--card);
     color: var(--foreground);
-    font-family: monospace;
+    font-family: lora, sans-serif;
     resize: vertical;
 }
 

@@ -15,6 +15,13 @@ body {
     min-height: 80vh;
 }
 
+@media (max-width: 768px) {
+    .container {
+        margin: 20px auto;
+        padding: 15px;
+    }
+}
+
 #quiz-container {
     display: flex;
     flex-direction: column;
@@ -139,6 +146,7 @@ body {
 }
 
 .review-item .status {
+    font-family: inter, sans-serif;
     font-size: 0.8rem;
     padding: 2px 8px;
     border-radius: 12px;
