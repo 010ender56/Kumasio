@@ -8,6 +8,8 @@ import {
   saveFullState,
   updateState,
   generateNavbar,
+  notification,
+  showToast
 } from "./lib.js";
 
 const nav = generateNavbar();
@@ -101,6 +103,7 @@ async function initApp() {
     window.location.href = "./editor.html?type=devquiz";
   });
 
+  // dev tools
   document.getElementById("devReset").addEventListener("click", () => {
     initState();
 
@@ -123,6 +126,22 @@ async function initApp() {
   document.getElementById("closeDev").addEventListener("click", () => {
     document.getElementById("devContainer").style.display = "none";
     sneezes = 0;
+  });
+
+  document.getElementById("debugNotification").addEventListener("click", () => {
+    notification({ title: "hello", body: "I am a test notification" });
+  });
+
+  document.getElementById("debugInfoToast").addEventListener("click", () => {
+    showToast("info", "hello. I am a test toast. I will contain messages.", 5000);
+  }); 
+
+  document.getElementById("debugErrorToast").addEventListener("click", () => {
+    showToast("error", "hello. I am a test toast. This is a fake error.", 5000);
+  });
+
+  document.getElementById("debugWarningToast").addEventListener("click", () => {
+    showToast("warning", "hello. I am a test toast. This is a fake warning.", 5000);
   });
 }
 

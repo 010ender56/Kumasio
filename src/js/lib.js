@@ -1,4 +1,34 @@
+"use strict";
+
 import localforage from "localforage";
+import { ask, confirm, message, open } from "@tauri-apps/plugin-dialog";
+import {
+  isPermissionGranted,
+  requestPermission,
+  sendNotification,
+} from "@tauri-apps/plugin-notification";
+
+(() => {
+  // check what environment we're in
+  const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+  const isHostedCloudflarePages = typeof process !== "undefined" && process?.env?.CF_PAGES === "1";
+
+  let environment = "";
+  if (isTauri) {
+    environment = "tauri";
+  } else if (isHostedCloudflarePages) {
+    environment = "cloudflare";
+  } else {
+    environment = "web";
+  }
+
+  Object.defineProperty(globalThis, "ENV", {
+    // globalThis.ENV
+    value: environment || "unknown",
+    writable: false,
+    configurable: false,
+  });
+})();
 
 export function save(filename, data, fileType = "text/html") {
   try {
@@ -29,27 +59,110 @@ export async function copy(text) {
   }
 }
 
-export function showError(message) {
-  if (typeof errorMessage !== "undefined") {
-    errorMessage.textContent = message;
-    errorMessage.classList.remove("hidden");
+// TODO: native web alert dialogs look bad, need to create custom ones
+export async function yesNoDialog({ message, title = "Kumasio", kind = "warning" }, onYes, onNo) {
+  const isTauri = globalThis.ENV === "tauri";
+
+  const confirmed = isTauri
+    ? await ask(message, { title: title, kind: kind })
+    : window.confirm(message); // ok / cancel only, vanilla JS has does not have yes/no
+
+  if (confirmed) {
+    onYes?.();
   } else {
-    console.error("Error: " + message);
+    onNo?.();
   }
 }
 
-export function hideError() {
-  if (typeof errorMessage !== "undefined") {
-    errorMessage.classList.add("hidden");
+export async function confirmationDialog(
+  { message, title = "Kumasio", kind = "warning" },
+  onYes,
+  onNo,
+) {
+  const isTauri = globalThis.ENV === "tauri";
+
+  const confirmed = isTauri
+    ? await confirm(message, { title: title, kind: kind })
+    : window.confirm(message);
+
+  if (confirmed) {
+    onYes?.();
+  } else {
+    onNo?.();
   }
 }
 
-export function validateNumber(value) {
-  const num = Number(value);
-  if (isNaN(num) || num <= 0) {
-    throw new Error(`Input must be a (positive) number.`);
+export async function messageDialog(
+  { message, title = "Kumasio", kind = "warning" },
+  onOk,
+  onClose,
+) {
+  const isTauri = globalThis.ENV === "tauri";
+
+  const confirmed = isTauri
+    ? await message(message, { title: title, kind: kind })
+    : window.alert(message);
+
+  if (confirmed) {
+    onOk?.();
+  } else {
+    onClose?.();
   }
-  return num;
+}
+
+export async function notification({ title = "Kumasio", body }) {
+  const isTauri = globalThis.ENV === "tauri";
+
+  if (isTauri) {
+    if (await isPermissionGranted() || (await requestPermission()) === "granted") {
+      sendNotification({ title, body });
+    }
+  } else {
+    if ("Notification" in window) {
+      Notification.requestPermission().then((permission) => {
+        if (permission === "granted") {
+          const notification = new Notification(title, {
+            body: body,
+            icon: "../assets/logo.png",
+          });
+        }
+      });
+    }
+  }
+}
+
+export function showToast(type, message, duration = 2000) {
+  let container = document.querySelector(".toast-container");
+  if (!container) {
+    container = document.createElement("div");
+    container.className = "toast-container";
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement("div");
+  toast.className = `toast toast-${type}`;
+  toast.textContent = message;
+
+  // remove when clicked on
+  toast.addEventListener("click", () => {
+    toast.classList.add("hidden");
+
+    // wait until the toast is hidden visually, then remove
+    setTimeout(() => {
+      toast.remove();
+    }, 250);
+  });
+
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.classList.add("hidden");
+
+    // wait until the toast is hidden visually, then remove
+    setTimeout(() => {
+      toast.remove();
+    }, 250);
+  }, duration);
 }
 
 export function createImageUploader(container, onFileSelected) {
@@ -134,10 +247,10 @@ export const fileToBase64 = async (file) => {
 };
 
 export function createSetTemplate(type = "quiz") {
-  if(type === "devquiz") {
+  if (type === "devquiz") {
     return createDevQuiz();
   }
-  
+
   return {
     name: type === "flashcards" ? "Untitled Flashcards" : "Untitled Quiz",
     description: "No description provided.",
@@ -160,10 +273,30 @@ export function createDevQuiz() {
         text: "What is the capital of France?",
         type: "multiple-choice",
         options: [
-          { text: "London", correct: false, image: "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
-          { text: "Berlin", correct: false, image: "https://images.unsplash.com/photo-1599946347371-68eb71b16afc?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
-          { text: "Paris", correct: true, image: "https://images.unsplash.com/photo-1550340499-a6c60fc8287c?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
-          { text: "Madrid", correct: false, image: "https://images.unsplash.com/photo-1543783207-ec64e4d95325?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
+          {
+            text: "London",
+            correct: false,
+            image:
+              "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+          },
+          {
+            text: "Berlin",
+            correct: false,
+            image:
+              "https://images.unsplash.com/photo-1599946347371-68eb71b16afc?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+          },
+          {
+            text: "Paris",
+            correct: true,
+            image:
+              "https://images.unsplash.com/photo-1550340499-a6c60fc8287c?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+          },
+          {
+            text: "Madrid",
+            correct: false,
+            image:
+              "https://images.unsplash.com/photo-1543783207-ec64e4d95325?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+          },
         ],
         expectedAnswer: "Paris",
         image: null,
@@ -205,7 +338,8 @@ export function createDevQuiz() {
         text: "Describe the process of photosynthesis in detail.",
         type: "long-answer",
         options: [],
-        expectedAnswer: "The process by which green plants and some other organisms use sunlight to synthesize foods with the help of chlorophyll pigments.",
+        expectedAnswer:
+          "The process by which green plants and some other organisms use sunlight to synthesize foods with the help of chlorophyll pigments.",
         image: null,
       },
       {
@@ -219,7 +353,8 @@ export function createDevQuiz() {
           { text: "Saturn", correct: false },
         ],
         expectedAnswer: "Mars",
-        image: "https://images.unsplash.com/photo-1701014159024-f9781490a228?q=80&w=1528&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+        image:
+          "https://images.unsplash.com/photo-1701014159024-f9781490a228?q=80&w=1528&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
       },
     ],
   };
@@ -240,7 +375,7 @@ export function initState(returnOnly = false) {
     userPrefs: {
       theme: "dark",
       language: "en",
-      
+
       defaultSide: "front", // "front" or "back" | for flashcards
       reducedMotion: false,
       flipDirection: "vertical", // "vertical" or "horizontal" | for flashcards
@@ -249,8 +384,8 @@ export function initState(returnOnly = false) {
       shortcuts: {
         next: "ArrowRight",
         prev: "ArrowLeft",
-        flip: " "
-      }
+        flip: " ",
+      },
     },
     activeSetResponses: {
       questions: {},
@@ -289,10 +424,10 @@ export function generateNavbar() {
   const pathname = window.location.pathname;
   const currentPage = pathname.substring(pathname.lastIndexOf("/") + 1) || "index.html";
   const searchParams = new URLSearchParams(window.location.search);
-  
+
   const backValue = pageMap[currentPage] || "home";
   const setParam = searchParams.get("set");
-  
+
   let settingsHref = `./settings.html?back=${backValue}`;
   if (setParam) {
     settingsHref += `&set=${setParam}`;
