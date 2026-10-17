@@ -1,4 +1,5 @@
 .stfolder/
+dist/
 node_modules/
 todo\ dev.md
 src-tauri/
