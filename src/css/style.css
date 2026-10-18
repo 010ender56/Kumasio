@@ -11,6 +11,9 @@
     --surface: #f8f8f8;
     --surface-lighter: #fcfcfc;
     --surface-darker: #f0f0f0;
+    --green: #16a34a;
+    --green-strong: #16a34a;
+    --green-muted: #22c55e;
     --red: #ef4444;
     --red-strong: #b91c1c;
     --red-muted: #fee2e2;
@@ -36,6 +39,9 @@
     --surface: #151515;
     --surface-lighter: #202020;
     --surface-darker: #0d0d0d;
+    --green: #16a34a;
+    --green-strong: #16a34a;
+    --green-muted: #22c55e;
     --red: #cf6679;
     --red-strong: #ef5350;
     --red-muted: #3d1c1c;
@@ -741,8 +747,8 @@ div[id="complete-view"] {
 }
 
 .toggle-group {
+    background-color: var(--card);
     display: inline-flex;
-    background-color: var(--surface-darker);
     padding: 4px;
     border-radius: 8px;
     border: 1px solid var(--border-main);
@@ -766,9 +772,8 @@ div[id="complete-view"] {
 }
 
 .toggle-btn.active {
-    background-color: var(--card);
+    background-color: var(--surface-darker);
     color: var(--accent);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     font-weight: 600;
 }
 
@@ -776,4 +781,30 @@ div[id="complete-view"] {
     opacity: 0;
     pointer-events: none;
     position: absolute;
+}
+
+progress {
+    appearance: none;
+    -webkit-appearance: none;
+    display: inline-block;
+    height: 10px;
+    border: none;
+    background-color: var(--surface-lighter);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+progress::-webkit-progress-bar {
+    background-color: var(--surface-lighter);
+    border-radius: 10px;
+}
+
+progress::-webkit-progress-value {
+    background-color: var(--accent);
+    border-radius: 10px;
+}
+
+progress::-moz-progress-bar {
+    background-color: var(--accent);
+    border-radius: 10px;
 }

@@ -31,6 +31,10 @@ const restartAllBtn = document.getElementById("restart-all-btn");
 const focusTroubleBtn = document.getElementById("focus-trouble-btn");
 const cramUndoBtn = document.getElementById("cram-undo-btn");
 
+const rated5CardsCount = document.getElementById("rated-5-cards");
+const rated3CardsCount = document.getElementById("rated-3-cards");
+const rated1CardsCount = document.getElementById("rated-1-cards");
+
 let state;
 let currentSetID = new URLSearchParams(window.location.search).get("set");
 let currentCardIndex = 0;
@@ -102,10 +106,13 @@ async function initApp() {
     } else {
       loadCardById(cramQueue[0], "next");
     }
-  } else {
+  } else if (mode === "review") {
+    document.querySelector(".card-counts").classList.add("hidden");
     document.querySelector(".controls").classList.remove("hidden");
     ratingControls.classList.add("hidden");
     loadCardAt(0);
+  } else if (mode === "srs") {
+    
   }
 }
 
@@ -337,11 +344,23 @@ document.body.addEventListener("keydown", (e) => {
     if (key === " ") e.preventDefault(); // stop scrolling when space is pressed
     flipCard();
   } else if (key === (shortcuts.next || "ArrowRight")) {
-    nextBtn.click();
+    if (mode === "cram") {
+      rate5Btn.click();
+    } else {
+      nextBtn.click();
+    }
   } else if (key === (shortcuts.prev || "ArrowLeft")) {
-    prevBtn.click();
+    if (mode === "cram") {
+      rate1Btn.click();
+    } else {
+      prevBtn.click();
+    }
   } else if (shortcuts.undo && key === shortcuts.undo) {
-    undoBtn.click();
+    if (mode === "cram") {
+      cramUndoBtn.click();
+    } else {
+      undoBtn.click();
+    }
   }
 });
 

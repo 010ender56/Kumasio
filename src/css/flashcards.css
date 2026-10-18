@@ -199,18 +199,18 @@ img {
 }
 
 .btn-danger:hover {
-    background-color: var(--red-strong, var(--red));
+    background-color: var(--red-strong);
     filter: brightness(0.9);
 }
 
 .btn-success {
-    background-color: #22c55e;
+    background-color: var(--green-muted);
     color: white;
-    border: 1px solid #16a34a;
+    border: 1px solid var(--green);
 }
 
 .btn-success:hover {
-    background-color: #16a34a;
+    background-color: var(--green-strong);
 }
 
 #undo-btn {
@@ -218,4 +218,38 @@ img {
     left: 0;
     width: 30px;
     height: 30px;
+}
+
+#current-progress {
+    position: absolute;
+    top: 7%;
+    width: 80vw;
+    height: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.card-count {
+    background-color: var(--card);
+    width: 50px;
+    min-width: 50px;
+    height: 50px;
+    padding: 10px;
+    border-radius: 10px;
+    font-family: inter;
+    font-size: 1.2rem;
+    color: var(--bg);
+    text-align: center;
+}
+
+#rated-1-cards {
+    background-color: var(--red);
+}
+
+#rated-3-cards {
+    background-color: var(--warning);
+}
+
+#rated-5-cards {
+    background-color: var(--green-muted);
 }

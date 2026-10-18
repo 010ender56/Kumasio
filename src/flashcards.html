@@ -10,6 +10,16 @@
     <body>
         <main>
             <div class="container">
+                <div class="overview">
+                    <div class="card-counts">
+                        <p class="card-count" id="rated-5-cards">0</p>
+                        <p class="card-count" id="rated-3-cards">0</p>
+                        <p class="card-count" id="rated-1-cards">0</p>
+                    </div>
+
+                    <progress id="current-progress" value="50" max="100" />
+                    <h1 id="progress-text">0 out of 0 cards to go</h1>
+                </div>
                 <div class="flashcards-container">
                     <div class="flashcard">
                         <div class="flashcard-inner">
@@ -38,6 +48,7 @@
                 <div class="rating-controls hidden" id="rating-controls">
                     <button class="btn" id="cram-undo-btn">↺</button>
                     <button class="btn btn-danger" id="rate-1">I don't know</button>
+                    <button class="btn hidden" id="rate-3">I know, but need pratice</button>
                     <button class="btn btn-success" id="rate-5">I know</button>
                 </div>
 
@@ -60,7 +71,9 @@
                         </div>
                         <div class="finished-actions">
                             <button class="btn" id="restart-all-btn">Restart All</button>
-                            <button class="cta" id="focus-trouble-btn">Focus on Trouble Cards</button>
+                            <button class="cta" id="focus-trouble-btn">
+                                Focus on Trouble Cards
+                            </button>
                         </div>
                     </div>
                 </div>
