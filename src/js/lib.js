@@ -540,3 +540,5 @@ export async function syncWithServer() {
 }
 
 window.addEventListener("online", syncWithServer);
+
+// 42 is everything

@@ -189,7 +189,7 @@ function updateCountDisplay() {
   
   progressBarEl.setAttribute("value", currentCardIndex);
   progressBarEl.setAttribute("max", totalLength);
-  progressTextEl.textContent = `${Math.round((currentCardIndex / totalLength) * 100)}% | ${currentCardIndex + 1} out of ${totalLength} cards to go`
+  progressTextEl.textContent = `${Math.round(((currentCardIndex + 1) / totalLength) * 100)}% | ${currentCardIndex + 1} out of ${totalLength} cards to go`
   
   rated1CardsCount.textContent = sessionCounts[1];
   rated3CardsCount.textContent = sessionCounts[3];
