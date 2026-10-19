@@ -1,19 +1,19 @@
 :root[data-theme="light"] {
-    --bg: #fdfdfd;
+    --bg: #f6f7fb;
     --card: #ffffff;
-    --translucent-surface: rgba(255, 255, 255, 0.6);
-    --text: #1a1a1a;
-    --text-muted: #555555;
-    --muted: #7a7a7a;
-    --border-main: #e0e0e0;
-    --border-darker: #cccccc;
+    --translucent-surface: rgba(255, 255, 255, 0.7);
+    --text: #1f2937;
+    --text-muted: #4b5563;
+    --muted: #6b7280;
+    --border-main: #e5e7eb;
+    --border-darker: #d1d5db;
     --accent: #2563eb;
-    --surface: #f8f8f8;
-    --surface-lighter: #fcfcfc;
-    --surface-darker: #f0f0f0;
+    --surface: #f3f4f6;
+    --surface-lighter: #f9fafb;
+    --surface-darker: #e5e7eb;
     --green: #16a34a;
-    --green-strong: #16a34a;
-    --green-muted: #22c55e;
+    --green-strong: #15803d;
+    --green-muted: #dcfce7;
     --red: #ef4444;
     --red-strong: #b91c1c;
     --red-muted: #fee2e2;
@@ -510,7 +510,7 @@ input:checked + .theme-icon::before {
 }
 
 .top-bar:not(:hover)::after {
-    content: "≡";
+    content: "=";
     font-size: 20px;
     position: absolute;
 }

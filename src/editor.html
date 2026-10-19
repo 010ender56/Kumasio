@@ -9,41 +9,49 @@
 
     <body>
         <dialog id="edit-set-dialog">
-            <div class="dialog-container">
-                <h3>Edit Info</h3>
+            <form class="dialog-container" method="dialog">
+                <header class="dialog-header">
+                    <h3>Edit Set Info</h3>
+                    <button type="button" class="icon-btn dialog-close" id="edit-dialog-close" aria-label="Close">×</button>
+                </header>
+
                 <div class="uploader-container" id="quiz-info-uploader"></div>
 
-                <div class="row">
-                    <label for="quiz-title">Set Title:</label>
-                    <input type="text" id="quiz-title" maxlength="55" />
+                <div class="field-group">
+                    <label for="quiz-title">Title</label>
+                    <input type="text" id="quiz-title" maxlength="55" placeholder="Set title" />
+                    <small class="field-hint">Up to 55 characters</small>
                 </div>
 
-                <div class="row">
-                    <label for="quiz-desc">Set Description:</label>
+                <div class="field-group">
+                    <label for="quiz-desc">Description</label>
                     <textarea
                         id="quiz-desc"
-                        placeholder="Enter set description here... (max 100 characters)"
+                        placeholder="Describe this set (max 100 characters)"
                         maxlength="100"
                     ></textarea>
-                    <p id="char-count">0/100</p>
+                    <p id="char-count" class="char-count">0/100</p>
                 </div>
 
-                <div class="row">
-                    <label for="quiz-type">Type:</label>
-                    <select id="quiz-type">
-                        <option value="quiz">Quiz/Answer Questions</option>
-                        <option value="flashcards">Flashcards/Study</option>
-                    </select>
+                <div class="field-row">
+                    <div class="field-group">
+                        <label for="quiz-type">Type</label>
+                        <select id="quiz-type">
+                            <option value="quiz">Quiz (Answer Questions)</option>
+                            <option value="flashcards">Flashcards (Study)</option>
+                        </select>
+                    </div>
+                    <div class="field-group" id="quiz-only-options">
+                        <label class="label-normal" for="one-way-quiz">Allow going back</label>
+                        <input type="checkbox" id="one-way-quiz" />
+                    </div>
                 </div>
 
-                <div class="row" id="quiz-only-options">
-                    <input type="checkbox" id="one-way-quiz" />
-                    <label for="one-way-quiz">Allow going back:</label>
-                </div>
-
-                <button class="cta" id="save-quiz-info">Save</button>
-                <button class="btn danger" id="delete-set">Delete</button>
-            </div>
+                <footer class="dialog-actions">
+                    <button class="btn danger" id="delete-set" type="button">Delete Set</button>
+                    <button class="cta" id="save-quiz-info" type="submit">Save Changes</button>
+                </footer>
+            </form>
         </dialog>
 
         <div class="quiz-wrapper">

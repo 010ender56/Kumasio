@@ -40,6 +40,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const quizOnlyOptions = document.getElementById("quiz-only-options");
   const oneWayOnly = document.getElementById("one-way-quiz");
   const builderPanel = document.getElementById("builder-panel");
+  const closeBtn = document.getElementById("edit-dialog-close");
 
   // QUESTION TYPE CONFIG
   const QUESTION_TYPES = {
@@ -128,6 +129,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     oneWayOnly.checked = !quiz.oneWay;
     quizOnlyOptions.style.display = quiz.type === "quiz" ? "block" : "none";
+
+    quizDescChars.textContent = `${quizDescInput.value.length}/100`;
   }
 
   function renderQuestionList() {
@@ -422,6 +425,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderBuilder();
   });
 
+  quizDescInput.addEventListener("input", () => {
+    quizDescChars.textContent = `${quizDescInput.value.length}/100`;
+  });
+
   deleteSetBtn.addEventListener("click", async () => {
     if (confirm("Are you sure you want to delete this quiz set?")) {
       delete state.sets[state.currentSet];
@@ -456,7 +463,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  async function initializeApp() {
+  async function initApp() {
     loadTheme(state.userPrefs.theme);
     const setParam = new URLSearchParams(window.location.search).get("set");
     if (setParam) {
@@ -484,5 +491,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderBuilder();
   }
 
-  await initializeApp();
+  closeBtn.addEventListener("click", () => {
+    editQuizDialog.close();
+  });
+
+  await initApp();
 });
