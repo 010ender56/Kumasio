@@ -7,6 +7,7 @@ import {
   requestPermission,
   sendNotification,
 } from "@tauri-apps/plugin-notification";
+import { shuffle, distance, fileToBase64 } from "utils.js";
 
 (() => {
   // check what environment we're in
@@ -28,6 +29,8 @@ import {
     writable: false,
     configurable: false,
   });
+
+  console.log("running in " + environment);
 })();
 
 export function save(filename, data, fileType = "text/html") {
@@ -234,18 +237,6 @@ export function createImageUploader(container, onFileSelected) {
   };
 }
 
-export const fileToBase64 = async (file) => {
-  if (!file) return null;
-
-  const arrayBuffer = await file.arrayBuffer();
-  const bytes = new Uint8Array(arrayBuffer);
-  let binary = "";
-  bytes.forEach((byte) => {
-    binary += String.fromCharCode(byte);
-  });
-  return `data:${file.type};base64,${btoa(binary)}`;
-};
-
 export function createSetTemplate(type = "quiz") {
   if (type === "devquiz") {
     return createDevQuiz();
@@ -403,10 +394,6 @@ export function initState(returnOnly = false) {
   saveFullState(initialState).then(function () {
     console.log("Initial state created:", initialState);
   });
-}
-
-export function pluralHelper(count, thing) {
-  return count === 1 ? `1 ${thing}` : `${count} ${thing}s`;
 }
 
 export function generateNavbar() {

@@ -11,15 +11,15 @@
         <main>
             <div class="container">
                 <div class="overview">
+                    <progress id="current-progress" value="50" max="100" />
+                    <h1 id="progress-text">0% | 0 out of 0 cards to go</h1>
                     <div class="card-counts">
                         <p class="card-count" id="rated-5-cards">0</p>
                         <p class="card-count" id="rated-3-cards">0</p>
                         <p class="card-count" id="rated-1-cards">0</p>
                     </div>
-
-                    <progress id="current-progress" value="50" max="100" />
-                    <h1 id="progress-text">0 out of 0 cards to go</h1>
                 </div>
+                
                 <div class="flashcards-container">
                     <div class="flashcard">
                         <div class="flashcard-inner">
@@ -40,6 +40,7 @@
                 </div>
 
                 <div class="controls">
+                    <button class="btn" id="shuffle-btn">🔀</button>
                     <button class="btn" id="prev-btn">Previous</button>
                     <button class="btn" id="undo-btn">↺</button>
                     <button class="cta" id="next-btn">Next</button>

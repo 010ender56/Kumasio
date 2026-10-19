@@ -4,3 +4,10 @@ node_modules/
 todo\ dev.md
 src-tauri/
 flashcard-examples-for-importing.md
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/

@@ -229,17 +229,36 @@ img {
     transform: translateX(-50%);
 }
 
+.card-counts {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 15px;
+    position: absolute;
+    top: 15%;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
 .card-count {
     background-color: var(--card);
-    width: 50px;
-    min-width: 50px;
-    height: 50px;
-    padding: 10px;
-    border-radius: 10px;
-    font-family: inter;
-    font-size: 1.2rem;
+    width: 45px;
+    height: 45px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    font-family: inter, sans-serif;
+    font-size: 1.1rem;
+    font-weight: bold;
     color: var(--bg);
     text-align: center;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease;
+}
+
+.card-count:hover {
+    transform: translateY(-2px);
 }
 
 #rated-1-cards {
