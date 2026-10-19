@@ -1,86 +1,73 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <title>Import</title>
-        <link rel="stylesheet" href="/css/style.css" />
-        <link rel="stylesheet" href="/css/flashcards.css" />
-    </head>
-
-    <body>
-        <main>
-            <div class="container">
-                <div class="overview">
-                    <progress id="current-progress" value="50" max="100" />
-                    <h1 id="progress-text">0% | 0 out of 0 cards to go</h1>
-                    <div class="card-counts">
-                        <p class="card-count" id="rated-5-cards">0</p>
-                        <p class="card-count" id="rated-3-cards">0</p>
-                        <p class="card-count" id="rated-1-cards">0</p>
-                    </div>
+<head>
+    <meta charset="UTF-8">
+    <title>Flashcards</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/flashcards.css">
+</head>
+<body>
+    <main>
+        <div class="container">
+            <div class="overview">
+                <progress id="current-progress" value="50" max="100"></progress>
+                <h3 id="progress-text">0% | 0 out of 0 cards to go</h3>
+                <div class="card-counts">
+                    <p class="card-count" id="rated-5-cards">0</p>
+                    <p class="card-count" id="rated-3-cards">0</p>
+                    <p class="card-count" id="rated-1-cards">0</p>
                 </div>
-                
-                <div class="flashcards-container">
-                    <div class="flashcard">
-                        <div class="flashcard-inner">
-                            <div class="flashcard-front">
-                                <img
-                                    src="assets/placeholder.png"
-                                    alt="Flashcard Image"
-                                    class="flashcard-image"
-                                    id="card-image"
-                                />
-                                <h1 id="card-front">Flashcard Front</h1>
-                            </div>
-                            <div class="flashcard-back">
-                                <h1 id="card-back">Flashcard Back</h1>
-                            </div>
+                <button class="btn btn-shuffle" id="shuffle-btn">Shuffle</button>
+            </div>
+            <div class="flashcards-container">
+                <div class="flashcard">
+                    <div class="flashcard-inner">
+                        <div class="flashcard-front">
+                            <img src="assets/placeholder.png" alt="Flashcard Image" class="flashcard-image" id="card-image">
+                            <h1 id="card-front">Flashcard Front</h1>
                         </div>
-                    </div>
-                </div>
-
-                <div class="controls">
-                    <button class="btn" id="shuffle-btn">🔀</button>
-                    <button class="btn" id="prev-btn">Previous</button>
-                    <button class="btn" id="undo-btn">↺</button>
-                    <button class="cta" id="next-btn">Next</button>
-                </div>
-
-                <div class="rating-controls hidden" id="rating-controls">
-                    <button class="btn" id="cram-undo-btn">↺</button>
-                    <button class="btn btn-danger" id="rate-1">I don't know</button>
-                    <button class="btn hidden" id="rate-3">I know, but need pratice</button>
-                    <button class="btn btn-success" id="rate-5">I know</button>
-                </div>
-
-                <div class="finished-screen hidden" id="finished-screen">
-                    <div class="finished-content">
-                        <h1>Deck Complete!</h1>
-                        <div class="analytics">
-                            <div class="stat-box">
-                                <span class="stat-label">Confidence</span>
-                                <span class="stat-value" id="stat-confidence">0%</span>
-                            </div>
-                            <div class="stat-box">
-                                <span class="stat-label">Cards Mastered</span>
-                                <span class="stat-value" id="stat-mastered">0/0</span>
-                            </div>
-                            <div class="stat-box">
-                                <span class="stat-label">Session Effort</span>
-                                <span class="stat-value" id="stat-effort">0</span>
-                            </div>
-                        </div>
-                        <div class="finished-actions">
-                            <button class="btn" id="restart-all-btn">Restart All</button>
-                            <button class="cta" id="focus-trouble-btn">
-                                Focus on Trouble Cards
-                            </button>
+                        <div class="flashcard-back">
+                            <h1 id="card-back">Flashcard Back</h1>
                         </div>
                     </div>
                 </div>
             </div>
-        </main>
-
-        <script src="/js/flashcards.js" type="module"></script>
-    </body>
+            <div class="controls">
+                <button class="btn" id="prev-btn">Previous</button>
+                <button class="btn" id="undo-btn">↺</button>
+                <button class="cta" id="next-btn">Next</button>
+            </div>
+            <div class="rating-controls hidden" id="rating-controls">
+                <button class="btn" id="cram-undo-btn">↺</button>
+                <button class="btn btn-danger" id="rate-1">I don't know</button>
+                <button class="btn hidden" id="rate-3">I know, but need practice</button>
+                <button class="btn btn-success" id="rate-5">I know</button>
+            </div>
+            <div class="finished-screen hidden" id="finished-screen">
+                <div class="finished-content">
+                    <h1>Deck Complete!</h1>
+                    <div class="analytics">
+                        <div class="stat-box">
+                            <span class="stat-label">Confidence</span>
+                            <span class="stat-value" id="stat-confidence">0%</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-label">Cards Mastered</span>
+                            <span class="stat-value" id="stat-mastered">0/0</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-label">Session Effort</span>
+                            <span class="stat-value" id="stat-effort">0</span>
+                        </div>
+                    </div>
+                    <div class="finished-actions">
+                        <button class="btn" id="restart-all-btn">Restart All</button>
+                        <button class="cta" id="focus-trouble-btn">Focus on Trouble Cards</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <script src="/js/flashcards.js" type="module"></script>
+</body>
 </html>

@@ -9,6 +9,7 @@ import {
   updateState,
   pluralHelper,
   generateNavbar,
+  shuffle,
 } from "./lib.js";
 
 const nav = generateNavbar();
@@ -30,17 +31,18 @@ const statMastered = document.getElementById("stat-mastered");
 const restartAllBtn = document.getElementById("restart-all-btn");
 const focusTroubleBtn = document.getElementById("focus-trouble-btn");
 const cramUndoBtn = document.getElementById("cram-undo-btn");
-const shuffle = document.getElementById("shuffle-btn");
+const shuffleBtn = document.getElementById("shuffle-btn");
 
+const progressBarEl = document.getElementById("current-progress");
+const progressTextEl = document.getElementById("progress-text");
 const rated5CardsCount = document.getElementById("rated-5-cards");
 const rated3CardsCount = document.getElementById("rated-3-cards");
 const rated1CardsCount = document.getElementById("rated-1-cards");
-const progressText = document.getElementById("progress-text");
-const progressBar = document.getElementById("current-progress")
 
 let state;
 let currentSetID = new URLSearchParams(window.location.search).get("set");
 let currentCardIndex = 0;
+let sessionQuestions = []; // session-local ordering for review mode
 let cramQueue = []; // stores card IDs for cram mode
 let sessionAttempts = 0; // track total cards seen in current session
 let sessionHistory = []; // track actions for undoing in cram mode
@@ -81,6 +83,7 @@ async function initApp() {
     return;
   }
 
+  sessionQuestions = [...currentSet.questions];
   defaultSide = state.userPrefs.defaultSide || "front";
 
   // apply settings
@@ -120,13 +123,16 @@ async function initApp() {
   } else if (mode === "review") {
     // REVIEW
 
-    document.querySelector(".card-counts").classList.add("hidden");
+    document.querySelector(".card-counts").classList.add("hidden"); // review does not require card counts
     document.querySelector(".controls").classList.remove("hidden");
     ratingControls.classList.add("hidden");
     loadCardAt(0);
   } else if (mode === "srs") {
     // SRS (in dev)
   }
+
+  // update count displays
+  updateCountDisplay();
 }
 
 function switchSideTo(side) {
@@ -138,27 +144,22 @@ function switchSideTo(side) {
 }
 
 function loadCardAt(index, direction = "next") {
-  const set = state.sets[currentSetID];
-  const questions = set.questions || [];
-
-  if (index < 0 || index >= questions.length) {
+  if (index < 0 || index >= sessionQuestions.length) {
     return;
   }
 
   currentCardIndex = index;
-  const card = questions[index];
+  const card = sessionQuestions[index];
   renderCard(card, direction);
 }
 
 function loadCardById(id, direction = "next") {
-  const set = state.sets[currentSetID];
-  const questions = set.questions || [];
-  const index = questions.findIndex((q) => q.id === id);
+  const index = sessionQuestions.findIndex((q) => q.id === id);
 
   if (index === -1) return;
 
   currentCardIndex = index;
-  const card = questions[index];
+  const card = sessionQuestions[index];
   renderCard(card, direction);
 }
 
@@ -184,7 +185,11 @@ function renderCard(card, direction) {
 }
 
 function updateCountDisplay() {
-
+  const totalLength = state.sets[currentSetID].questions.length;
+  
+  progressBarEl.setAttribute("value", currentCardIndex);
+  progressBarEl.setAttribute("max", totalLength);
+  progressTextEl.textContent = `${Math.round((currentCardIndex / totalLength) * 100)}% | ${currentCardIndex} out of ${totalLength} cards to go`
   
   rated1CardsCount.textContent = sessionCounts[1];
   rated3CardsCount.textContent = sessionCounts[3];
@@ -218,7 +223,7 @@ async function undoCramAction() {
 
   const lastAction = sessionHistory.pop();
 
-  // Undo session count changes
+  // undo session count changes
   if (lastAction.newRating && sessionCounts.hasOwnProperty(lastAction.newRating)) {
     sessionCounts[lastAction.newRating]--;
   }
@@ -264,7 +269,7 @@ async function handleRating(rating) {
 
   sessionAttempts++;
 
-  // Update session counts
+  // update session counts
   if (prevRating && sessionCounts.hasOwnProperty(prevRating)) {
     sessionCounts[prevRating]--;
   }
@@ -303,24 +308,29 @@ async function handleRating(rating) {
 
 // event listeners
 nextBtn.addEventListener("click", () => {
-  const set = state.sets[currentSetID];
-  if (currentCardIndex < (set.questions?.length || 0) - 1) {
+  if (currentCardIndex < (sessionQuestions.length || 0) - 1) {
     loadCardAt(currentCardIndex + 1, "next");
   } else {
     alert("You've reached the end of the deck!");
   }
+
+  updateCountDisplay();
 });
 
 prevBtn.addEventListener("click", () => {
   if (currentCardIndex > 0) {
     loadCardAt(currentCardIndex - 1, "prev");
   }
+
+  updateCountDisplay();
 });
 
 undoBtn.addEventListener("click", () => {
   if (currentCardIndex > 0) {
     loadCardAt(currentCardIndex - 1, "prev");
   }
+
+  updateCountDisplay();
 });
 
 restartAllBtn.addEventListener("click", async () => {
@@ -369,8 +379,19 @@ focusTroubleBtn.addEventListener("click", async () => {
   loadCardById(cramQueue[0], "next");
 });
 
-shuffle.addEventListener("click", () => {
-  
+shuffleBtn.addEventListener("click", () => {
+  if (mode === "review") {
+    const fixed = sessionQuestions.slice(0, currentCardIndex);
+    const remaining = sessionQuestions.slice(currentCardIndex);
+    const shuffled = shuffle(remaining);
+    sessionQuestions = [...fixed, ...shuffled];
+    loadCardAt(currentCardIndex, "next");
+  } else if (mode === "cram") {
+    cramQueue = shuffle(cramQueue);
+    if (cramQueue.length > 0) {
+      loadCardById(cramQueue[0], "next");
+    }
+  }
 });
 
 rate1Btn.addEventListener("click", () => handleRating(1));

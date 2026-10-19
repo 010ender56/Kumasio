@@ -7,7 +7,9 @@ import {
   requestPermission,
   sendNotification,
 } from "@tauri-apps/plugin-notification";
-import { shuffle, distance, fileToBase64 } from "utils.js";
+import { shuffle, distance, pluralHelper, fileToBase64 } from "./utils.js";
+
+export { shuffle, distance, pluralHelper, fileToBase64 }; // these are from utils.js
 
 (() => {
   // check what environment we're in

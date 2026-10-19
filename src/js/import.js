@@ -94,7 +94,6 @@ async function handleImport() {
   currentState.sets[newSetId] = newSet;
   
   await saveFullState(currentState);
-  alert(`Successfully imported ${cards.length} flashcards!`);
   window.location.href = './index.html';
 }
 
