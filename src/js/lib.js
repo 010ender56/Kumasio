@@ -1,6 +1,9 @@
 "use strict";
 
 import localforage from "localforage";
+import { LazyStore } from '@tauri-apps/plugin-store';
+import Database from '@tauri-apps/plugin-sql';
+import * as appWindow from '@tauri-apps/api/window';
 import { ask, confirm, message, open } from "@tauri-apps/plugin-dialog";
 import {
   isPermissionGranted,
@@ -34,6 +37,54 @@ export { shuffle, distance, pluralHelper, fileToBase64 }; // these are from util
 
   console.log("running in " + environment);
 })();
+
+let dbInstance = null;
+let prefsStore = null;
+
+async function getDb() {
+  if (globalThis.ENV !== "tauri") return null;
+  if (dbInstance) return dbInstance;
+
+  try {
+    dbInstance = await Database.load("sqlite:app-storage.db");
+    await dbInstance.execute("CREATE TABLE IF NOT EXISTS kv_store (key TEXT PRIMARY KEY, value TEXT)");
+    return dbInstance;
+  } catch (e) {
+    console.error("Failed to load SQL database:", e);
+    return null;
+  }
+}
+
+async function getPrefsStore() {
+  if (globalThis.ENV !== "tauri") return null;
+  if (prefsStore) return prefsStore;
+
+  try {
+    prefsStore = new LazyStore("settings.json");
+    return prefsStore;
+  } catch (e) {
+    console.error("Failed to load LazyStore:", e);
+    return null;
+  }
+}
+
+async function dbGet(key) {
+  if (globalThis.ENV !== "tauri") return await localforage.getItem(key);
+  const db = await getDb();
+  if (!db) return await localforage.getItem(key);
+  const result = await db.select("SELECT value FROM kv_store WHERE key = ?", [key]);
+  return result.length > 0 ? JSON.parse(result[0].value) : null;
+}
+
+async function dbSet(key, value) {
+  if (globalThis.ENV !== "tauri") return await localforage.setItem(key, value);
+  const db = await getDb();
+  if (!db) return await localforage.setItem(key, value);
+  await db.execute(
+    "INSERT INTO kv_store (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = EXCLUDED.value",
+    [key, JSON.stringify(value)]
+  );
+}
 
 export function save(filename, data, fileType = "text/html") {
   try {
@@ -98,15 +149,16 @@ export async function confirmationDialog(
 }
 
 export async function messageDialog(
-  { message, title = "Kumasio", kind = "warning" },
+  body,
+  { title = "Kumasio", kind = "warning" },
   onOk,
   onClose,
 ) {
   const isTauri = globalThis.ENV === "tauri";
 
   const confirmed = isTauri
-    ? await message(message, { title: title, kind: kind })
-    : window.alert(message);
+    ? await message(body, { title: title, kind: kind })
+    : window.alert(body);
 
   if (confirmed) {
     onOk?.();
@@ -463,12 +515,40 @@ export function capitalize(str) {
 }
 
 export async function getState() {
+  if (globalThis.ENV === "tauri") {
+    const stateWithoutPrefs = await dbGet("appState");
+
+    const store = await getPrefsStore();
+    const userPrefs = store ? await store.get("userPrefs") : await localforage.getItem("userPrefs");
+
+    if (!stateWithoutPrefs) return initState(true);
+
+    return {
+      ...stateWithoutPrefs,
+      userPrefs: userPrefs || stateWithoutPrefs.userPrefs,
+    };
+  }
+
   const state = await localforage.getItem("appState");
   return state || initState(true);
 }
 
 export async function saveFullState(state) {
-  await localforage.setItem("appState", state);
+  if (globalThis.ENV === "tauri") {
+    const { userPrefs, ...stateWithoutPrefs } = state;
+
+    const store = await getPrefsStore();
+    if (store) {
+      await store.set("userPrefs", userPrefs);
+      await store.save();
+    } else {
+      await localforage.setItem("userPrefs", userPrefs);
+    }
+
+    await dbSet("appState", stateWithoutPrefs);
+  } else {
+    await localforage.setItem("appState", state);
+  }
 }
 
 export async function updateState(path, value) {
@@ -495,7 +575,7 @@ export async function updateState(path, value) {
 }
 
 export async function queueChange(path, value) {
-  const queue = (await localforage.getItem("syncQueue")) || [];
+  const queue = (await dbGet("syncQueue")) || [];
   const filteredQueue = queue.filter((item) => item.path !== path);
 
   filteredQueue.push({
@@ -506,21 +586,21 @@ export async function queueChange(path, value) {
     synced: false,
   });
 
-  await localforage.setItem("syncQueue", filteredQueue);
+  await dbSet("syncQueue", filteredQueue);
 }
 
 export async function getDirtyItems() {
-  const queue = (await localforage.getItem("syncQueue")) || [];
+  const queue = (await dbGet("syncQueue")) || [];
   return queue.filter((item) => !item.synced);
 }
 
 export async function markAsSynced(changeId) {
-  const queue = (await localforage.getItem("syncQueue")) || [];
+  const queue = (await dbGet("syncQueue")) || [];
   const updatedQueue = queue.map((item) => {
     if (item.id === changeId) return { ...item, synced: true };
     return item;
   });
-  await localforage.setItem("syncQueue", updatedQueue);
+  await dbSet("syncQueue", updatedQueue);
 }
 
 export async function syncWithServer() {

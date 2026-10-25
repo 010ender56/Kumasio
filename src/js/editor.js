@@ -295,7 +295,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
     saveBtn.addEventListener("click", async () => {
       await saveState();
-      alert("Saved!");
     });
   }
 

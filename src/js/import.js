@@ -8,6 +8,7 @@ import {
   saveFullState,
   updateState,
   generateNavbar,
+  messageDialog,
 } from "./lib.js";
 
 const nav = generateNavbar();
@@ -64,7 +65,7 @@ async function handleImport() {
     const fileInput = document.getElementById('file-input');
     const file = fileInput.files[0];
     if (!file) {
-      alert("Please select a file first.");
+      messageDialog("Please select a file first.", { title: "Notice" });
       return;
     }
     text = await file.text();
@@ -73,7 +74,7 @@ async function handleImport() {
   const cards = parseFlashcards(text);
 
   if (cards.length === 0) {
-    alert("No valid flashcards found. Please check the format.");
+    messageDialog("No valid flashcards found. Please check the format.", { title: "Notice" });
     return;
   }
 
