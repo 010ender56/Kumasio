@@ -19,12 +19,6 @@ const SETTINGS_CONFIG = {
     label: "General",
     settings: [
       {
-        id: "userName",
-        label: "Display Name",
-        type: "text",
-        description: "The name shown on your profile.",
-      },
-      {
         id: "theme",
         label: "Appearance",
         type: "toggle",
@@ -43,6 +37,46 @@ const SETTINGS_CONFIG = {
         description: "No flashcard flip animations, page transitions, etc.",
       },
     ],
+  },
+  account: {
+    label: "Account",
+    settings: [
+      {
+      id: "userName",
+      label: "Display Name",
+      type: "text",
+      description: "The name shown on your profile."
+      }
+    ]
+  },
+  shortcuts: {
+    label: "Keyboard Shortcuts",
+    settings: [
+      {
+        id: "shortcuts.flip",
+        label: "Flip Card",
+        type: "keyboard-shortcut",
+        description: "Shortcut to flip the card.",
+      },
+      {
+        id: "shortcuts.next",
+        label: "Next Card",
+        type: "keyboard-shortcut",
+        description: "Shortcut to move to the next flashcard.",
+      },
+      {
+        id: "shortcuts.prev",
+        label: "Previous Card",
+        type: "keyboard-shortcut",
+        description: "Shortcut to move to the previous flashcard.",
+      },
+      {
+        id: "shortcuts.undo",
+        label: "Undo Action",
+        type: "keyboard-shortcut",
+        description: "Shortcut to undo the last action.",
+      },
+    ]
   },
   experience: {
     label: "Experience",
@@ -182,10 +216,7 @@ function renderContent() {
                     <div class="skeleton" style="width: 100%; height: 60px; margin-bottom: 24px;"></div>
                 `;
   content.appendChild(skeleton);
-
-  setTimeout(() => {
-    renderSettingsList();
-  }, 300);
+  renderSettingsList();
 }
 
 function renderSettingsList() {
@@ -225,12 +256,18 @@ function createSettingElement(setting) {
   header.appendChild(label);
 
   let input;
-  const value = state?.userPrefs?.[setting.id] ?? "";
+  
+  // resolve value for potentially nested paths (e.g., "shortcuts.next")
+  const value = setting.id.includes('.') 
+    ? setting.id.split('.').reduce((acc, part) => acc && acc[part], state?.userPrefs) 
+    : state?.userPrefs?.[setting.id];
+
+  const finalValue = value ?? "";
 
   if (setting.type === "text") {
     input = document.createElement("input");
     input.type = "text";
-    input.value = value;
+    input.value = finalValue;
     input.onchange = (e) => updateSetting(setting.id, e.target.value);
   } else if (setting.type === "select") {
     input = document.createElement("select");
@@ -238,14 +275,14 @@ function createSettingElement(setting) {
       const option = document.createElement("option");
       option.value = opt;
       option.textContent = opt.charAt(0).toUpperCase() + opt.slice(1);
-      if (opt === value) option.selected = true;
+      if (opt === finalValue) option.selected = true;
       input.appendChild(option);
     });
     input.onchange = (e) => updateSetting(setting.id, e.target.value);
   } else if (setting.type === "checkbox") {
     input = document.createElement("input");
     input.type = "checkbox";
-    input.checked = !!value;
+    input.checked = !!finalValue;
     input.onchange = (e) => updateSetting(setting.id, e.target.checked);
 
     const row = document.createElement("div");
@@ -268,7 +305,7 @@ function createSettingElement(setting) {
 
     setting.options.forEach((opt) => {
       const btn = document.createElement("button");
-      btn.className = `toggle-btn ${opt.value === value ? "active" : ""}`;
+      btn.className = `toggle-btn ${opt.value === finalValue ? "active" : ""}`;
       btn.textContent = opt.label;
       btn.onclick = () => updateSetting(setting.id, opt.value);
       input.appendChild(btn);
@@ -278,6 +315,35 @@ function createSettingElement(setting) {
     input.className = setting.dangerous ? "danger btn" : "btn";
     input.textContent = setting.label;
     input.onclick = () => handleAction(setting.action);
+  } else if (setting.type === "keyboard-shortcut") {
+    input = document.createElement("button");
+    input.className = "kbd-button";
+    input.textContent = finalValue === " " ? "Spacebar" : finalValue || "None";
+
+    input.onclick = () => {
+      input.textContent = "Press any key...";
+      input.classList.add("listening");
+
+      const handleKeyDown = (e) => {
+        e.preventDefault();
+        let shortcut = [];
+        if (e.ctrlKey) shortcut.push("Ctrl");
+        if (e.altKey) shortcut.push("Alt");
+        if (e.shiftKey) shortcut.push("Shift");
+        if (e.metaKey) shortcut.push("Meta");
+
+        const modifierKeys = ["Control", "Alt", "Shift", "Meta"];
+        if (!modifierKeys.includes(e.key)) {
+          shortcut.push(e.key);
+        }
+
+        const shortcutString = shortcut.join(" + ") || e.key;
+        updateSetting(setting.id, shortcutString);
+        window.removeEventListener("keydown", handleKeyDown);
+      };
+
+      window.addEventListener("keydown", handleKeyDown);
+    };
   }
 
   if (input) {

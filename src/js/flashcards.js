@@ -10,6 +10,7 @@ import {
   pluralHelper,
   generateNavbar,
   shuffle,
+  matchShortcut,
 } from "./lib.js";
 
 const nav = generateNavbar();
@@ -411,22 +412,22 @@ document.body.addEventListener("keydown", (e) => {
 
   const key = e.key;
 
-  if (key === (shortcuts.flip || " ")) {
+  if (matchShortcut(e, shortcuts.flip || " ")) {
     if (key === " ") e.preventDefault(); // stop scrolling when space is pressed
     flipCard();
-  } else if (key === (shortcuts.next || "ArrowRight")) {
+  } else if (matchShortcut(e, shortcuts.next || "ArrowRight")) {
     if (mode === "cram") {
       rate5Btn.click();
     } else {
       nextBtn.click();
     }
-  } else if (key === (shortcuts.prev || "ArrowLeft")) {
+  } else if (matchShortcut(e, shortcuts.prev || "ArrowLeft")) {
     if (mode === "cram") {
       rate1Btn.click();
     } else {
       prevBtn.click();
     }
-  } else if (shortcuts.undo && key === shortcuts.undo) {
+  } else if (shortcuts.undo && matchShortcut(e, shortcuts.undo)) {
     if (mode === "cram") {
       cramUndoBtn.click();
     } else {

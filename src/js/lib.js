@@ -430,6 +430,7 @@ export function initState(returnOnly = false) {
         next: "ArrowRight",
         prev: "ArrowLeft",
         flip: " ",
+        undo: ""
       },
     },
     activeSetResponses: {
@@ -620,5 +621,44 @@ export async function syncWithServer() {
 }
 
 window.addEventListener("online", syncWithServer);
+
+export function matchShortcut(event, shortcutString) {
+  if (!shortcutString) return false;
+
+  const parts = shortcutString.split(" + ");
+  const modifiers = {
+    Ctrl: event.ctrlKey,
+    Alt: event.altKey,
+    Shift: event.shiftKey,
+    Meta: event.metaKey,
+  };
+
+  let keyMatch = false;
+  let modifierMatch = true;
+
+  for (const part of parts) {
+    if (modifiers.hasOwnProperty(part)) {
+      if (!modifiers[part]) {
+        modifierMatch = false;
+        break;
+      }
+    } else {
+      if (part !== event.key) {
+        modifierMatch = false;
+        break;
+      }
+      keyMatch = true;
+    }
+  }
+
+  if (!keyMatch && parts.length > 0) {
+    const lastPart = parts[parts.length - 1];
+    if (!modifiers.hasOwnProperty(lastPart)) {
+      return false;
+    }
+  }
+
+  return modifierMatch;
+}
 
 // 42 is everything

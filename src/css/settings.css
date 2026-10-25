@@ -115,3 +115,33 @@ body {
     flex-direction: column;
     gap: 12px;
 }
+
+.kbd-button {
+    padding: 4px 8px;
+    background: var(--surface-darker);
+    border: 1px solid var(--border-main);
+    border-radius: 4px;
+    color: var(--text);
+    font-family: monospace;
+    font-size: 0.85rem;
+    cursor: pointer;
+    min-width: 80px;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 0 var(--border-main);
+}
+
+.kbd-button:hover {
+    background: var(--surface);
+}
+
+.kbd-button:active {
+    box-shadow: none;
+    transform: translateY(2px);
+}
+
+.kbd-button.listening {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+    box-shadow: 0 2px 0 var(--border-main);
+}
