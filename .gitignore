@@ -11,3 +11,4 @@ flashcard-examples-for-importing.md
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+.stignore

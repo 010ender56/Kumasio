@@ -432,7 +432,11 @@ export function initState(returnOnly = false) {
         flip: " ",
         undo: ""
       },
+      recentSets: [],
     },
+    // gotta wire these up sometime
+    isFirstTimeUser: false,
+    hasSeenVersionChangelog: false,
     activeSetResponses: {
       questions: {},
     },
@@ -618,6 +622,25 @@ export async function syncWithServer() {
     await markAsSynced(change.id);
   }
   console.log("Sync complete.");
+}
+
+export async function trackRecentSet(setID) {
+  const state = await getState();
+  let recent = state.userPrefs?.recentSets || [];
+
+  // Remove if already exists to move it to the top
+  recent = recent.filter(item => item.id !== setID);
+
+  // Add to the beginning
+  recent.unshift({
+    id: setID,
+    timestamp: Date.now()
+  });
+
+  // Limit to 10 items
+  recent = recent.slice(0, 10);
+
+  await updateState('userPrefs.recentSets', recent);
 }
 
 window.addEventListener("online", syncWithServer);

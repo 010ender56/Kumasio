@@ -9,13 +9,15 @@ import {
   updateState,
   generateNavbar,
   notification,
-  showToast
+  showToast,
+  trackRecentSet,
 } from "./lib.js";
 
 const nav = generateNavbar();
 document.body.prepend(nav);
 
 const grid = document.getElementById("quizGrid");
+const recentGrid = document.getElementById("recentSets");
 const greetingHeader = document.getElementById("greeting-header");
 const noQuizzesMsg = document.getElementById("noQuizzesMsg");
 const createNewBtn = document.querySelector(".create-btn");
@@ -64,24 +66,59 @@ async function initApp() {
     loadTheme(state.userPrefs.theme);
 
     // now we begin loading
+    const recentGridFragment = document.createDocumentFragment();
+    const globalGridFragment = document.createDocumentFragment();
+
+    // load the recent list
+    state.userPrefs.recentSets.forEach((currentSet, key) => {
+      const card = document.createElement("div");
+      card.className = "quiz-card";
+    
+      const { image, name, type, description } = state.sets["i" + key];
+      card.setAttribute("data-set", key);
+    
+      card.innerHTML = `
+        <img src="${image || "assets/placeholder.png"}" alt="Picture for ${name || "Untitled"}">
+        <span class="quiz-title">${name || "Untitled Set"}</span>
+        <span class="quiz-type">${type}</span>
+        <p class="quiz-desc">${description || "No description available."}</p>
+      `;
+    
+      card.addEventListener("click", () => {
+        window.location.href = `./editor.html?set=${encodeURIComponent(key)}`;
+      });
+    
+      recentGridFragment.appendChild(card);
+    });
+
+    recentGrid.appendChild(recentGridFragment);
+
+    // load the global view
     for (const [key, currentSet] of Object.entries(state.sets)) {
       const card = document.createElement("div");
       card.className = "quiz-card";
 
+      const { image, name, type, description } = currentSet;
+
       card.innerHTML = `
-                      <img src="${currentSet.image || "assets/placeholder.png"}" alt="Picutre for ${currentSet.name}">
-                      <span class="quiz-type">${currentSet.type}</span>
-                      <span class="quiz-title">${currentSet.name}</span>
-                      <p class="quiz-desc">${currentSet.description}</p>
+                      <img src="${image || "assets/placeholder.png"}" alt="Picture for ${name}">
+                      <span class="quiz-title">${name}</span>
+                      <span class="quiz-type">${type}</span>
+                      <p class="quiz-desc">${description}</p>
                     `;
 
       card.addEventListener("click", () => {
-        window.location.href = `./editor.html?set=${key}`;
+        window.location.href = `./editor.html?set=${encodeURIComponent(key)}`;
       });
 
-      grid.appendChild(card);
+      globalGridFragment.appendChild(card);
     }
+
+    // add the fragments to the page
+    recentGrid.appendChild(recentGridFragment);
+    grid.appendChild(globalGridFragment);
   }
+  
   // event listeners for create buttons
   createNewBtn.addEventListener("click", () => {
     createOptionsContainer.classList.toggle("hidden");
@@ -134,7 +171,7 @@ async function initApp() {
 
   document.getElementById("debugInfoToast").addEventListener("click", () => {
     showToast("info", "hello. I am a test toast. I will contain messages.", 5000);
-  }); 
+  });
 
   document.getElementById("debugErrorToast").addEventListener("click", () => {
     showToast("error", "hello. I am a test toast. This is a fake error.", 5000);

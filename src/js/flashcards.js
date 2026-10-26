@@ -7,6 +7,7 @@ import {
   getState,
   saveFullState,
   updateState,
+  trackRecentSet,
   pluralHelper,
   generateNavbar,
   shuffle,
@@ -31,6 +32,7 @@ const statConfidence = document.getElementById("stat-confidence");
 const statMastered = document.getElementById("stat-mastered");
 const restartAllBtn = document.getElementById("restart-all-btn");
 const focusTroubleBtn = document.getElementById("focus-trouble-btn");
+const takeQuizBtn = document.getElementById("pratice-quiz-btn");
 const cramUndoBtn = document.getElementById("cram-undo-btn");
 const shuffleBtn = document.getElementById("shuffle-btn");
 
@@ -198,10 +200,12 @@ function updateCountDisplay() {
 }
 
 function flipCard() {
+  trackRecentSet(currentSetID);
   flashcard.classList.toggle("flipped");
 }
 
 async function showFinishedScreen() {
+  trackRecentSet(currentSetID);
   const set = state.sets[currentSetID];
   const progress = state.flashcardsProgress?.[currentSetID] || {};
 
@@ -252,6 +256,7 @@ async function undoCramAction() {
 }
 
 async function handleRating(rating) {
+  trackRecentSet(currentSetID);
   const set = state.sets[currentSetID];
   const card = set.questions[currentCardIndex];
   if (!card) return;
@@ -312,6 +317,7 @@ nextBtn.addEventListener("click", () => {
   if (currentCardIndex < (sessionQuestions.length || 0) - 1) {
     loadCardAt(currentCardIndex + 1, "next");
   } else {
+    trackRecentSet(currentSetID);
     alert("You've reached the end of the deck!");
   }
 

@@ -7,6 +7,7 @@ import {
   getState,
   saveFullState,
   updateState,
+  trackRecentSet,
   pluralHelper,
   generateNavbar,
 } from "./lib.js";
@@ -405,6 +406,7 @@ function setInputsDisabled(disabled) {
 }
 
 function renderCompleteScreen() {
+  trackRecentSet(currentSetID);
   const currentSet = state.sets[currentSetID];
   const responses = state.activeSetResponses[currentSetID] || { questions: {} };
 
