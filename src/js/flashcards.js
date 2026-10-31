@@ -190,9 +190,10 @@ function renderCard(card, direction) {
 function updateCountDisplay() {
   const totalLength = state.sets[currentSetID].questions.length;
   
-  progressBarEl.setAttribute("value", currentCardIndex);
+  // Use currentCardIndex + 1 to reflect the current card number instead of the 0-based index
+  progressBarEl.setAttribute("value", currentCardIndex + 1);
   progressBarEl.setAttribute("max", totalLength);
-  progressTextEl.textContent = `${Math.round(((currentCardIndex + 1) / totalLength) * 100)}% | ${currentCardIndex + 1} out of ${totalLength} cards to go`
+  progressTextEl.textContent = `${Math.round(((currentCardIndex + 1) / totalLength) * 100)}% | Card ${currentCardIndex + 1} of ${totalLength}`;
   
   rated1CardsCount.textContent = sessionCounts[1];
   rated3CardsCount.textContent = sessionCounts[3];
@@ -237,15 +238,20 @@ async function undoCramAction() {
   }
   updateCountDisplay();
 
+  const currentProgress = state.flashcardsProgress?.[currentSetID] || {};
+  const updatedProgress = { ...currentProgress };
+
   if (lastAction.previousRating === undefined) {
     // no rating before, so remove progress entry
-    state = await updateState(`flashcardsProgress.${currentSetID}.${lastAction.cardId}`, null);
+    delete updatedProgress[lastAction.cardId];
   } else {
-    state = await updateState(`flashcardsProgress.${currentSetID}.${lastAction.cardId}`, {
+    updatedProgress[lastAction.cardId] = {
       rating: lastAction.previousRating,
       last_practiced: lastAction.timestamp,
-    });
+    };
   }
+
+  state = await updateState(`flashcardsProgress.${currentSetID}`, updatedProgress);
 
   // restore
   cramQueue = lastAction.queueBefore;
@@ -262,14 +268,14 @@ async function handleRating(rating) {
   if (!card) return;
 
   // save
-  const currentProgress = state.flashcardsProgress?.[currentSetID]?.[card.id];
-  const prevRating = currentProgress?.rating;
+  const currentProgress = state.flashcardsProgress?.[currentSetID] || {};
+  const prevRating = currentProgress[card.id]?.rating;
 
   sessionHistory.push({
     cardId: card.id,
     newRating: rating,
     previousRating: prevRating,
-    timestamp: currentProgress?.last_practiced,
+    timestamp: currentProgress[card.id]?.last_practiced,
     queueBefore: [...cramQueue],
   });
 
@@ -284,14 +290,16 @@ async function handleRating(rating) {
   }
   updateCountDisplay();
 
-  // save: state.flashcardsProgress[setID][cardID] = { rating, last_practiced }
-  const progressPath = `flashcardsProgress.${currentSetID}.${card.id}`;
-  const progressValue = {
-    rating: rating,
-    last_practiced: Date.now(),
+  // save: update the entire progress object for the set to avoid potential deep-path issues in updateState
+  const updatedProgress = {
+    ...currentProgress,
+    [card.id]: {
+      rating: rating,
+      last_practiced: Date.now(),
+    },
   };
 
-  state = await updateState(progressPath, progressValue);
+  state = await updateState(`flashcardsProgress.${currentSetID}`, updatedProgress);
 
   if (mode === "cram") {
     // if they know it, remove from queue. Otherwise, move to end.
