@@ -54,6 +54,7 @@ let sessionCounts = {
   3: 0,
   5: 0,
 };
+let sessionRepeatedCards = new Set(); // track cards already pushed back in cram mode
 
 const mode = new URLSearchParams(window.location.search).get("mode") || "review"; // default to review mode
 /*
@@ -112,10 +113,14 @@ async function initApp() {
     document.querySelector(".controls").classList.add("hidden");
     ratingControls.classList.remove("hidden");
 
-    // init cram queue: all cards that aren't "known" (rating 5)
+    // init cram queue: all cards that aren't "known" (last rating is not 5)
     const progress = state.flashcardsProgress?.[currentSetID] || {};
     cramQueue = currentSet.questions
-      .filter((q) => !progress[q.id] || progress[q.id].rating !== 5)
+      .filter((q) => {
+        const p = progress[q.id];
+        if (!p || !p.history || p.history.length === 0) return true;
+        return p.history[p.history.length - 1] !== 5;
+      })
       .map((q) => q.id);
 
     if (cramQueue.length === 0) {
@@ -211,7 +216,10 @@ async function showFinishedScreen() {
   const progress = state.flashcardsProgress?.[currentSetID] || {};
 
   const totalCards = set.questions.length;
-  const masteredCards = set.questions.filter((q) => progress[q.id]?.rating === 5).length;
+  const masteredCards = set.questions.filter((q) => {
+    const p = progress[q.id];
+    return p && p.history && p.history.length > 0 && p.history[p.history.length - 1] === 5;
+  }).length;
   const confidence = totalCards > 0 ? Math.round((masteredCards / totalCards) * 100) : 0;
 
   statConfidence.textContent = `${confidence}%`;
@@ -240,15 +248,17 @@ async function undoCramAction() {
 
   const currentProgress = state.flashcardsProgress?.[currentSetID] || {};
   const updatedProgress = { ...currentProgress };
+  const cardProgress = { ...currentProgress[lastAction.cardId] };
+  
+  if (cardProgress.history) {
+    cardProgress.history = [...cardProgress.history];
+    cardProgress.history.pop();
+  }
 
-  if (lastAction.previousRating === undefined) {
-    // no rating before, so remove progress entry
+  if (!cardProgress.history || cardProgress.history.length === 0) {
     delete updatedProgress[lastAction.cardId];
   } else {
-    updatedProgress[lastAction.cardId] = {
-      rating: lastAction.previousRating,
-      last_practiced: lastAction.timestamp,
-    };
+    updatedProgress[lastAction.cardId] = cardProgress;
   }
 
   state = await updateState(`flashcardsProgress.${currentSetID}`, updatedProgress);
@@ -256,6 +266,7 @@ async function undoCramAction() {
   // restore
   cramQueue = lastAction.queueBefore;
   sessionAttempts--;
+  sessionRepeatedCards.delete(lastAction.cardId);
 
   // and load
   loadCardById(lastAction.cardId, "prev");
@@ -269,13 +280,15 @@ async function handleRating(rating) {
 
   // save
   const currentProgress = state.flashcardsProgress?.[currentSetID] || {};
-  const prevRating = currentProgress[card.id]?.rating;
+  const cardProgress = currentProgress[card.id] || {};
+  const history = cardProgress.history || [];
+  const prevRating = history.length > 0 ? history[history.length - 1] : undefined;
 
   sessionHistory.push({
     cardId: card.id,
     newRating: rating,
     previousRating: prevRating,
-    timestamp: currentProgress[card.id]?.last_practiced,
+    timestamp: cardProgress.last_practiced,
     queueBefore: [...cramQueue],
   });
 
@@ -290,11 +303,11 @@ async function handleRating(rating) {
   }
   updateCountDisplay();
 
-  // save: update the entire progress object for the set to avoid potential deep-path issues in updateState
+  // save: update with history array
   const updatedProgress = {
     ...currentProgress,
     [card.id]: {
-      rating: rating,
+      history: [...history, rating],
       last_practiced: Date.now(),
     },
   };
@@ -306,8 +319,9 @@ async function handleRating(rating) {
     const currentCardId = card.id;
     cramQueue = cramQueue.filter((id) => id !== currentCardId);
 
-    if (rating === 1) {
+    if (rating === 1 && !sessionRepeatedCards.has(currentCardId)) {
       cramQueue.push(currentCardId);
+      sessionRepeatedCards.add(currentCardId);
     }
 
     if (cramQueue.length === 0) {
@@ -370,9 +384,13 @@ focusTroubleBtn.addEventListener("click", async () => {
   const set = state.sets[currentSetID];
   const progress = state.flashcardsProgress?.[currentSetID] || {};
 
-  // ONLY cards with rating < 5
+  // ONLY cards answered with "I don't know" (rating 1) in the past two times
   const troubleCards = set.questions
-    .filter((q) => progress[q.id] && progress[q.id].rating < 5)
+    .filter((q) => {
+      const p = progress[q.id];
+      if (!p || !p.history || p.history.length < 2) return false;
+      return p.history[p.history.length - 1] === 1 && p.history[p.history.length - 2] === 1;
+    })
     .map((q) => q.id);
 
   if (troubleCards.length === 0) {
@@ -382,6 +400,7 @@ focusTroubleBtn.addEventListener("click", async () => {
 
   sessionAttempts = 0;
   sessionHistory = [];
+  sessionRepeatedCards.clear();
   sessionCounts = { 1: 0, 3: 0, 5: 0 };
   updateCountDisplay();
 
