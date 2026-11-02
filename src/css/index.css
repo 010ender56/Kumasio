@@ -45,16 +45,6 @@ body {
     font-weight: 600;
 }
 
-.quiz-type {
-    margin: 0;
-    font-family: inter, sans-serif;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
 .quiz-desc {
     font-size: 0.85rem;
     color: var(--muted);
@@ -135,4 +125,85 @@ body {
     transform: translate(-50%, -50%);
     padding: 20px;
     display: none;
+}
+
+dialog#set-overview {
+    width: min(560px, 90vw);
+    height: auto;
+    max-height: 90vh;
+    border: 1px solid var(--border-main);
+    border-radius: 10px;
+    padding: 1.25rem;
+    background-color: var(--card);
+    color: var(--text);
+    overflow-y: auto;
+}
+
+dialog#set-overview[open] {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+dialog#set-overview::backdrop {
+    background-color: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+dialog#set-overview #set-image {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid var(--border-main);
+    background-color: var(--surface);
+    display: block;
+}
+
+dialog#set-overview h1#set-title {
+    font-size: 1.35rem;
+    font-weight: 600;
+    line-height: 1.25;
+    margin: 0;
+}
+
+.set-type {
+    display: inline-block;
+    width: fit-content;
+    font-family: inter, sans-serif;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    background-color: var(--surface);
+    border-radius: 4px;
+    padding: 2px 8px;
+}
+
+dialog#set-overview #set-description {
+    font-size: 0.9rem;
+    line-height: 1.45;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+dialog#set-overview hr {
+    border: none;
+    border-top: 1px solid var(--border-main);
+    margin: 0.25rem 0;
+}
+
+.overview-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+}
+
+.overview-actions .btn,
+.overview-actions .cta {
+    flex: 1 1 140px;
+    max-width: 200px;
 }

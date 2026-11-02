@@ -26,9 +26,49 @@ const createFromImportBtn = document.getElementById("newImport");
 const createFlashcardsBtn = document.getElementById("newFlashcard");
 const createQuizBtn = document.getElementById("newQuiz");
 const createDevQuizBtn = document.getElementById("newDevQuiz");
+const overviewDialog = document.getElementById("set-overview");
+const overviewDialogCloseBtn = document.getElementById("overview-close-btn");
+const overviewDialogEditBtn = document.getElementById("edit-this-set");
+const overviewDialogPracticeBtn = document.getElementById("practice-this-set");
+const overviewSetName = document.getElementById("set-title");
+const overviewSetDescription = document.getElementById("set-description");
+const overviewSetType = document.getElementById("set-type");
 
 let state;
 let sneezes = 0;
+
+function showOverviewDialog(setID) {
+  if (!setID) throw new Error("need setID to open the overview dialog");
+
+  // populate data
+  const setData = state.sets[setID];
+  overviewSetName.textContent = setData.name;
+  overviewSetDescription.textContent = setData.description;
+
+  // set the quiz type
+  if (setData.type === "quiz") {
+    overviewSetType.textContent = "Quiz";
+  } else if (setData.type === "flashcards") {
+    overviewSetType.textContent = "Flashcards";
+  } else {
+    overviewSetType.textContent = "Unknown";
+  }
+
+  overviewDialogEditBtn.addEventListener("click", () => {
+    window.location.href = `./editor.html?set=${encodeURIComponent(setID)}`;
+  });
+
+  overviewDialogPracticeBtn.addEventListener("click", () => {
+    if (setData.type === "quiz" || setData.type === "devquiz") {
+      window.location.href = `./quiz.html?set=${encodeURIComponent(setID)}`;
+    } else if (setData.type === "flashcards") {
+      window.location.href = `./flashcards.html?set=${encodeURIComponent(setID)}`;
+    }
+  });
+
+  // show the dialog
+  overviewDialog.showModal();
+}
 
 async function initApp() {
   const hours = new Date().getHours();
@@ -73,21 +113,23 @@ async function initApp() {
     state.userPrefs.recentSets.forEach((currentSet, key) => {
       const card = document.createElement("div");
       card.className = "quiz-card";
-    
-      const { image, name, type, description } = state.sets["i" + key];
-      card.setAttribute("data-set", key);
-    
+
+      const set = state.sets[currentSet];
+      if (!set) return;
+      const { image, name, type, description } = set;
+      card.setAttribute("data-set", currentSet);
+
       card.innerHTML = `
         <img src="${image || "assets/placeholder.png"}" alt="Picture for ${name || "Untitled"}">
         <span class="quiz-title">${name || "Untitled Set"}</span>
-        <span class="quiz-type">${type}</span>
+        <span class="set-type">${type}</span>
         <p class="quiz-desc">${description || "No description available."}</p>
       `;
-    
+
       card.addEventListener("click", () => {
-        window.location.href = `./editor.html?set=${encodeURIComponent(key)}`;
+        window.location.href = `./editor.html?set=${encodeURIComponent(currentSet)}`;
       });
-    
+
       recentGridFragment.appendChild(card);
     });
 
@@ -103,22 +145,23 @@ async function initApp() {
       card.innerHTML = `
                       <img src="${image || "assets/placeholder.png"}" alt="Picture for ${name}">
                       <span class="quiz-title">${name}</span>
-                      <span class="quiz-type">${type}</span>
+                      <span class="set-type">${type}</span>
                       <p class="quiz-desc">${description}</p>
                     `;
 
       card.addEventListener("click", () => {
-        window.location.href = `./editor.html?set=${encodeURIComponent(key)}`;
+        // previously: window.location.href = `./editor.html?set=${encodeURIComponent(key)}`;
+
+        showOverviewDialog(key);
       });
 
       globalGridFragment.appendChild(card);
     }
 
     // add the fragments to the page
-    recentGrid.appendChild(recentGridFragment);
     grid.appendChild(globalGridFragment);
   }
-  
+
   // event listeners for create buttons
   createNewBtn.addEventListener("click", () => {
     createOptionsContainer.classList.toggle("hidden");
@@ -137,7 +180,11 @@ async function initApp() {
   });
 
   createDevQuizBtn.addEventListener("click", () => {
-    window.location.href = "./editor.html?type=devquiz";
+    window.location.href = `./editor.html?type=devquiz`;
+  });
+
+  overviewDialogCloseBtn.addEventListener("click", () => {
+    overviewDialog.close();
   });
 
   // dev tools
