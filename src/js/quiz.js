@@ -14,9 +14,10 @@ import {
 
 const nav = generateNavbar();
 document.body.prepend(nav);
+
 let state;
-let isPreview = new URLSearchParams(window.location.search).has("preview") || false;
-let currentSetID = new URLSearchParams(window.location.search).get("set");
+const isPreview = new URLSearchParams(window.location.search).has("preview");
+const currentSetID = new URLSearchParams(window.location.search).get("set");
 
 const setNameEl = document.getElementById("set-name");
 const setDescEl = document.getElementById("set-desc");
@@ -32,359 +33,45 @@ const startBtn = document.getElementById("start");
 const backBtn = document.querySelector(".back-btn");
 const nextBtn = document.querySelector(".next-btn");
 const skipBtn = document.querySelector(".skip-btn");
+
 let currentIndex = 0;
+let busy = false;
 
-async function loadAppState() {
-  try {
-    state = await getState();
+// helpers
 
-    // Ensure activeSetResponses and results exist
-    if (!state.activeSetResponses) {
-      state.activeSetResponses = { questions: {} };
-    }
-    if (!state.results) {
-      state.results = {};
-    }
-
-    loadTheme(state.userPrefs.theme);
-    initApp();
-  } catch (err) {
-    console.error("Error loading state:", err);
-  }
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
-async function initApp() {
-  let currentSet = state.sets[currentSetID];
-  if (!currentSet) {
-    alert("Set not found!");
-    window.location.href = "./index.html";
-    return;
-  }
-  console.log("Set data found:", currentSet);
-
-  // Ensure current set's response bucket exists
-  if (!state.activeSetResponses[currentSetID]) {
-    state.activeSetResponses[currentSetID] = { questions: {} };
-  }
-  if (!state.activeSetSubmissions) {
-    state.activeSetSubmissions = {};
-  }
-  if (!state.activeSetSubmissions[currentSetID]) {
-    state.activeSetSubmissions[currentSetID] = {};
-  }
-
-  if (isPreview) {
-    previewModeEl.style.display = "block";
-  } else {
-    previewModeEl.style.display = "none";
-  }
-  document.title = currentSet.name || "Untitled";
-  setNameEl.textContent = currentSet.name || "Set Name";
-  setDescEl.textContent = currentSet.description || "Set Description";
-
-  setInfoEl.textContent = `${pluralHelper(currentSet.questions.length, "question")} · Estimated ${currentSet.questions.length * 2} mins · Quiz`;
-
-  startBtn.addEventListener("click", startQuiz);
-  backBtn.addEventListener("click", () => navigate(-1));
-  nextBtn.addEventListener("click", handleNext);
-  skipBtn.addEventListener("click", () => navigate(1));
+/**
+ * Normalize whatever the editor stored in `question.feedback` into one of:
+ *   "show" -> Show Correct Answer
+ *   "hide" -> Hide Correct Answer
+ *   "none" -> No Feedback
+ */
+function getFeedbackMode(question) {
+  const raw = String(question.feedback ?? "")
+    .toLowerCase()
+    .trim()
+    .replace(/[\s-]+/g, "_");
+  if (["show_correct", "show", "show_correct_answer", "showcorrect"].includes(raw)) return "show";
+  if (["hide_correct", "hide", "hide_correct_answer", "hidecorrect"].includes(raw)) return "hide";
+  return "none";
 }
 
-async function handleNext() {
-  const currentSet = state.sets[currentSetID];
-  const currentQuestion = currentSet.questions[currentIndex];
-
-  const response = getCurrentResponse();
-  if (currentQuestion.required && isResponseEmpty(response)) {
-    alert("This question is required. Please provide an answer before proceeding.");
-    return;
-  }
-
-  if (currentIndex === currentSet.questions.length - 1) {
-    // Save final response
-    await updateState(
-      `activeSetResponses.${currentSetID}.questions.${currentQuestion.id}`,
-      response,
-    );
-
-    let reviewHtml = `<h1>You've finished.</h1>`;
-
-    if (!currentSet.oneWay) {
-      reviewHtml += `<p>Review your questions anytime before turning in.</p>
-                          <div class="review-list">`;
-
-      currentSet.questions.forEach((q, idx) => {
-        const resp = state.activeSetResponses[currentSetID]?.questions[q.id];
-        let isAnswered = false;
-        if (resp !== undefined && resp !== null) {
-          if (Array.isArray(resp)) {
-            isAnswered = resp.length > 0;
-          } else if (typeof resp === "string") {
-            isAnswered = resp.trim() !== "";
-          } else {
-            isAnswered = true;
-          }
-        }
-        reviewHtml += `
-                                <div class="review-item" onclick="goToQuestion(${idx})">
-                                    ${q.image ? `<img src="${q.image}" alt="Question image">` : ""}
-                                    <div class="title"><p class="muted-text">${idx + 1}. </p>${q.text}</div>
-                                    <div class="status ${isAnswered ? "answered" : "Unanswered"}">${isAnswered ? "Answered" : "Unanswered"}</div>
-                                </div>
-                            `;
-      });
-
-      reviewHtml += `</div>
-                          <hr />
-                          <button class="cta" onclick="navigate(0)">No, I want to go back.</button>`;
-    }
-
-    reviewHtml += `<button class="btn" id="finishQuiz">Yes, proceed and turn in.</button>`;
-    reviewView.innerHTML = reviewHtml;
-    questionView.style.display = "none";
-    reviewView.style.display = "block";
-
-    document.getElementById("finishQuiz").addEventListener("click", () => {
-      renderCompleteScreen();
-    });
-  } else {
-    const feedbackMode = currentQuestion.feedback || "submitted";
-    if (
-      feedbackMode !== "submitted" &&
-      !state.activeSetSubmissions?.[currentSetID]?.[currentQuestion.id]
-    ) {
-      const response = getCurrentResponse();
-      await updateState(
-        `activeSetResponses.${currentSetID}.questions.${currentQuestion.id}`,
-        response,
-      );
-      await updateState(`activeSetSubmissions.${currentSetID}.${currentQuestion.id}`, true);
-
-      const feedback = getFeedback(currentQuestion, response);
-      const feedbackDiv = document.getElementById("feedback-container");
-
-      if (feedbackDiv) {
-        feedbackDiv.textContent = feedback.message;
-        feedbackDiv.style.display = "block";
-        feedbackDiv.style.backgroundColor =
-          feedback.status === "correct"
-            ? "#d4edda"
-            : feedback.status === "partial"
-              ? "#fff3cd"
-              : "#f8d7da";
-        feedbackDiv.style.color =
-          feedback.status === "correct"
-            ? "#155724"
-            : feedback.status === "partial"
-              ? "#856404"
-              : "#721c24";
-
-        if (currentQuestion.feedback === "show_correct" && feedback.status !== "correct") {
-          feedbackDiv.textContent += ` Correct answer: ${feedback.correctText}`;
-        }
-      }
-
-      updateNavButtons();
-
-      if (!isResponseEmpty(response) && currentQuestion.changeable !== true) {
-        setInputsDisabled(true);
-      }
-    } else {
-      navigate(1);
-    }
-  }
-}
-
-function startQuiz() {
-  const currentSet = state.sets[currentSetID];
-  if (!currentSet || !currentSet.questions || currentSet.questions.length === 0) {
-    alert("This set has no questions!");
-    return;
-  }
-
-  startScreen.style.display = "none";
-  quizContainer.style.display = "block";
-  currentIndex = 0;
-  renderQuestion(currentSet.questions[currentIndex]);
-  restoreResponse(currentIndex);
-  updateNavButtons();
-}
-
-function getCurrentResponse() {
-  const currentSet = state.sets[currentSetID];
-  const question = currentSet.questions[currentIndex];
-  let response = null;
-
-  if (question.type === "multiple-choice" || question.type === "true-false") {
-    const selectedOption = document.querySelector('input[name="quiz-answer"]:checked');
-    if (selectedOption) {
-      response = parseInt(selectedOption.value);
-    }
-  } else if (question.type === "multiple-response") {
-    const selectedOptions = Array.from(
-      document.querySelectorAll('input[type="checkbox"]:checked'),
-    ).map((cb) => parseInt(cb.value));
-    response = selectedOptions;
-  } else if (question.type === "short-answer") {
-    const input = document.querySelector(".short-answer-input");
-    response = input ? input.value.trim() : "";
-  } else if (question.type === "long-answer") {
-    const textarea = document.querySelector(".long-answer-input");
-    response = textarea ? textarea.value.trim() : "";
-  }
-
-  return response;
-}
-
-function restoreResponse(index) {
-  const currentSet = state.sets[currentSetID];
-  const savedResponse =
-    state.activeSetResponses[currentSetID]?.questions[currentSet.questions[index].id];
-  if (savedResponse !== undefined && savedResponse !== null) {
-    if (
-      currentSet.questions[index].type === "multiple-choice" ||
-      currentSet.questions[index].type === "true-false"
-    ) {
-      const radioToCheck = document.querySelector(
-        `input[name="quiz-answer"][value="${savedResponse}"]`,
-      );
-      if (radioToCheck) radioToCheck.checked = true;
-    } else if (currentSet.questions[index].type === "multiple-response") {
-      const checkboxesToCheck = document.querySelectorAll('input[type="checkbox"]');
-      checkboxesToCheck.forEach((cb) => {
-        cb.checked = savedResponse.includes(parseInt(cb.value));
-      });
-    } else if (currentSet.questions[index].type === "short-answer") {
-      const input = document.querySelector(".short-answer-input");
-      if (input) input.value = savedResponse;
-    } else if (currentSet.questions[index].type === "long-answer") {
-      const textarea = document.querySelector(".long-answer-input");
-      if (textarea) textarea.value = savedResponse;
-    }
-  }
-}
-
-async function goToQuestion(index) {
-  await autoSave();
-  const currentSet = state.sets[currentSetID];
-  currentIndex = Math.max(0, Math.min(index, currentSet.questions.length - 1));
-
-  reviewView.style.display = "none";
-  questionView.style.display = "block";
-
-  renderQuestion(currentSet.questions[currentIndex]);
-  updateNavButtons();
-  restoreResponse(currentIndex);
-}
-window.goToQuestion = goToQuestion;
-
-async function navigate(direction) {
-  const currentSet = state.sets[currentSetID];
-  reviewView.style.display = "none";
-  questionView.style.display = "block";
-
-  await autoSave();
-
-  currentIndex += direction;
-  if (currentIndex < 0) currentIndex = 0;
-  if (currentIndex >= currentSet.questions.length) {
-    currentIndex = currentSet.questions.length - 1;
-  }
-
-  renderQuestion(currentSet.questions[currentIndex]);
-  updateNavButtons();
-  restoreResponse(currentIndex);
-}
-window.navigate = navigate;
-
-function updateNavButtons() {
-  const currentSet = state.sets[currentSetID];
-  const currentQuestion = currentSet.questions[currentIndex];
-  const feedbackMode = currentQuestion.feedback || "submitted";
-  backBtn.disabled = currentIndex === 0;
-  skipBtn.style.display = "block";
-
-  if (currentIndex === currentSet.questions.length - 1) {
-    nextBtn.textContent = "Review & Turn In";
-    skipBtn.style.display = "none";
-  } else if (
-    feedbackMode === "submitted" ||
-    state.activeSetSubmissions?.[currentSetID]?.[currentQuestion.id]
-  ) {
-    nextBtn.textContent = "Next →";
-    skipBtn.style.display = "none";
-  } else {
-    if (!currentQuestion.required) {
-      skipBtn.style.display = "none";
-    }
-    nextBtn.textContent = "Submit";
-  }
-}
-
-async function autoSave() {
-  const currentSet = state.sets[currentSetID];
-  if (currentSet && currentSet.questions[currentIndex]) {
-    const response = getCurrentResponse();
-    state = await updateState(
-      `activeSetResponses.${currentSetID}.questions.${currentSet.questions[currentIndex].id}`,
-      response,
-    );
-  }
-}
-
-function getFeedback(question, response) {
-  if (response === undefined || response === null || response === "")
-    return { status: "wrong", message: "No answer provided." };
-
-  let isCorrect = false;
-  let isPartial = false;
-  let correctText = "";
-
-  if (question.type === "multiple-choice" || question.type === "true-false") {
-    const expected = question.options.find((o) => o.correct)?.text;
-    const selected = question.options[response]?.text;
-    isCorrect = selected === expected;
-    correctText = expected;
-  } else if (question.type === "multiple-response") {
-    const expected = question.options
-      .filter((o) => o.correct)
-      .map((o) => o.text)
-      .sort();
-    const selected = question.options
-      .filter((_, idx) => response.includes(idx))
-      .map((o) => o.text)
-      .sort();
-
-    if (JSON.stringify(expected) === JSON.stringify(selected)) {
-      isCorrect = true;
-    } else {
-      const correctSelected = selected.filter((s) => expected.includes(s));
-      const wrongSelected = selected.filter((s) => !expected.includes(s));
-      if (correctSelected.length > 0 && wrongSelected.length > 0) {
-        isPartial = true;
-      } else if (correctSelected.length > 0) {
-        isPartial = true;
-      }
-    }
-
-    correctText = expected.join(", ");
-  } else if (question.type === "short-answer" || question.type === "long-answer") {
-    const expected = question.expectedAnswer;
-    const selected = response.trim();
-    if (question.validationMode === "exact match") {
-      isCorrect = selected.toLowerCase() === expected.toLowerCase();
-    } else {
-      isCorrect =
-        selected.toLowerCase().includes(expected.toLowerCase()) ||
-        expected.toLowerCase().includes(selected.toLowerCase());
-    }
-    correctText = expected;
-  }
-
-  if (isCorrect) return { status: "correct", message: "Correct!", correctText };
-  if (isPartial) return { status: "partial", message: "Partially Correct!", correctText };
-  return { status: "wrong", message: "Wrong!", correctText };
-}
+const getSet = () => state.sets[currentSetID];
+const getQuestion = () => getSet().questions[currentIndex];
+const responsePath = (q) => `activeSetResponses.${currentSetID}.questions.${q.id}`;
+const submissionPath = (q) => `activeSetSubmissions.${currentSetID}.${q.id}`;
+const getSavedResponse = (q) => state.activeSetResponses?.[currentSetID]?.questions?.[q.id];
+const isSubmitted = (q) => Boolean(state.activeSetSubmissions?.[currentSetID]?.[q.id]);
+// Locked = submitted and the question is not changeable after submission
+const isLocked = (q) => isSubmitted(q) && q.changeable !== true;
 
 function isResponseEmpty(response) {
   if (response === undefined || response === null) return true;
@@ -393,97 +80,565 @@ function isResponseEmpty(response) {
   return false;
 }
 
-function setInputsDisabled(disabled) {
-  const inputs = document.querySelectorAll(".answer-container input, .answer-container textarea");
-  inputs.forEach((input) => {
-    input.disabled = disabled;
-    if (disabled) {
-      input.classList.add("locked-answer");
-    } else {
-      input.classList.remove("locked-answer");
+let saveChain = Promise.resolve();
+function persist(path, value) {
+  saveChain = saveChain
+    .then(async () => {
+      state = await updateState(path, value);
+    })
+    .catch((err) => console.error("Save failed:", path, err));
+  return saveChain;
+}
+
+async function loadAppState() {
+  try {
+    state = await getState();
+    if (!state.activeSetResponses) state.activeSetResponses = {};
+    if (!state.activeSetSubmissions) state.activeSetSubmissions = {};
+    if (!state.results) state.results = {};
+
+    loadTheme(state.userPrefs?.theme);
+    initApp();
+  } catch (err) {
+    console.error("Error loading state:", err);
+  }
+}
+
+function initApp() {
+  const currentSet = state.sets?.[currentSetID];
+  if (!currentSet) {
+    alert("Set not found!");
+    window.location.href = "./index.html";
+    return;
+  }
+
+  if (!state.activeSetResponses[currentSetID]) {
+    state.activeSetResponses[currentSetID] = { questions: {} };
+  }
+  if (!state.activeSetSubmissions[currentSetID]) {
+    state.activeSetSubmissions[currentSetID] = {};
+  }
+
+  previewModeEl.style.display = isPreview ? "block" : "none";
+  document.title = currentSet.name || "Untitled";
+  setNameEl.textContent = currentSet.name || "Set Name";
+  setDescEl.textContent = currentSet.description || "Set Description";
+  setInfoEl.textContent = `${pluralHelper(currentSet.questions.length, "question")} · Estimated ${currentSet.questions.length * 2} mins · Quiz`;
+
+  startBtn.addEventListener("click", startQuiz);
+  backBtn.addEventListener("click", () => navigate(-1));
+  nextBtn.addEventListener("click", handleNext);
+  skipBtn.addEventListener("click", handleSkip);
+}
+
+function startQuiz() {
+  const currentSet = getSet();
+  if (!currentSet?.questions?.length) {
+    alert("This set has no questions!");
+    return;
+  }
+  startScreen.style.display = "none";
+  quizContainer.style.display = "block";
+  showQuestion(0);
+}
+
+// Navigation
+
+async function showQuestion(index) {
+  const set = getSet();
+  currentIndex = Math.max(0, Math.min(index, set.questions.length - 1));
+  const question = getQuestion();
+
+  reviewView.style.display = "none";
+  completeView.style.display = "none";
+  questionView.style.display = "block";
+
+  renderQuestion(question);
+  restoreResponse(question);
+
+  if (isSubmitted(question)) {
+    renderFeedback(question);
+    if (isLocked(question)) lockQuestion();
+  }
+  updateNavButtons();
+}
+
+async function navigate(direction) {
+  await autoSave();
+  await showQuestion(currentIndex + direction);
+}
+
+async function goToQuestion(index) {
+  await autoSave();
+  await showQuestion(index);
+}
+
+async function advance() {
+  await autoSave();
+  if (currentIndex >= getSet().questions.length - 1) {
+    await showReview();
+  } else {
+    await showQuestion(currentIndex + 1);
+  }
+}
+
+async function handleSkip() {
+  if (busy) return;
+  const question = getQuestion();
+  if (question.required) return; // required questions can never be skipped
+  busy = true;
+  try {
+    await advance();
+  } finally {
+    busy = false;
+  }
+}
+
+async function handleNext() {
+  if (busy) return;
+  busy = true;
+  try {
+    const question = getQuestion();
+    const response = getCurrentResponse();
+
+    if (question.required && isResponseEmpty(response)) {
+      showFeedbackBox("This question is required. Please answer it before continuing.", "error");
+      return;
     }
+
+    if (isSubmitted(question)) {
+      await advance();
+      return;
+    }
+
+    if (isResponseEmpty(response)) {
+      await advance();
+      return;
+    }
+
+    await persist(responsePath(question), response);
+    await persist(submissionPath(question), true);
+
+    renderFeedback(question);
+    if (isLocked(question)) lockQuestion();
+    updateNavButtons();
+  } finally {
+    busy = false;
+  }
+}
+
+function updateNavButtons() {
+  const set = getSet();
+  const question = getQuestion();
+  const isLast = currentIndex === set.questions.length - 1;
+
+  backBtn.disabled = currentIndex === 0;
+  backBtn.style.display = set.oneWay ? "none" : "";
+
+  if (isSubmitted(question)) {
+    nextBtn.textContent = isLast ? (set.oneWay ? "Finish" : "Review & Turn In") : "Next →";
+    skipBtn.style.display = "none";
+  } else {
+    nextBtn.textContent = "Submit";
+    skipBtn.style.display = question.required ? "none" : "";
+  }
+}
+
+function getCurrentResponse() {
+  const question = getQuestion();
+  switch (question.type) {
+    case "multiple-choice":
+    case "true-false": {
+      const selected = questionContent.querySelector('input[name="quiz-answer"]:checked');
+      return selected ? parseInt(selected.value, 10) : null;
+    }
+    case "multiple-response":
+      return Array.from(questionContent.querySelectorAll('input[type="checkbox"]:checked')).map(
+        (cb) => parseInt(cb.value, 10),
+      );
+    case "short-answer": {
+      const input = questionContent.querySelector(".short-answer-input");
+      return input ? input.value.trim() : "";
+    }
+    case "long-answer": {
+      const textarea = questionContent.querySelector(".long-answer-input");
+      return textarea ? textarea.value.trim() : "";
+    }
+    default:
+      return null;
+  }
+}
+
+function restoreResponse(question) {
+  const saved = getSavedResponse(question);
+  if (saved === undefined || saved === null) return;
+
+  if (question.type === "multiple-choice" || question.type === "true-false") {
+    const radio = questionContent.querySelector(`input[name="quiz-answer"][value="${saved}"]`);
+    if (radio) radio.checked = true;
+  } else if (question.type === "multiple-response") {
+    const list = Array.isArray(saved) ? saved : [];
+    questionContent.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+      cb.checked = list.includes(parseInt(cb.value, 10));
+    });
+  } else if (question.type === "short-answer") {
+    const input = questionContent.querySelector(".short-answer-input");
+    if (input) input.value = saved;
+  } else if (question.type === "long-answer") {
+    const textarea = questionContent.querySelector(".long-answer-input");
+    if (textarea) textarea.value = saved;
+  }
+}
+
+async function autoSave() {
+  if (!state?.sets?.[currentSetID]) return;
+  const question = getQuestion();
+  if (!question || isLocked(question)) return;
+  await persist(responsePath(question), getCurrentResponse());
+}
+
+// this fires every answer edit
+async function onAnswerChanged(event) {
+  const question = getQuestion();
+  if (isLocked(question)) return;
+
+  if (question.type === "long-answer" && question.validationType === "number") {
+    event.target.value = event.target.value.replace(/[^\d.\-]/g, "");
+  }
+
+  await autoSave();
+
+  if (isSubmitted(question)) {
+    if (isResponseEmpty(getSavedResponse(question))) {
+      await persist(submissionPath(question), false);
+      hideFeedbackBox();
+    } else {
+      renderFeedback(question);
+    }
+    updateNavButtons();
+  }
+}
+
+function lockQuestion() {
+  questionContent
+    .querySelectorAll(".answer-container input, .answer-container textarea")
+    .forEach((input) => {
+      input.disabled = true;
+      input.classList.add("locked-answer");
+    });
+  if (!questionContent.querySelector(".locked-notice")) {
+    const notice = document.createElement("small");
+    notice.className = "locked-notice";
+    notice.textContent = "This question has been submitted. You cannot change it.";
+    questionContent.appendChild(notice);
+  }
+}
+
+function normalizeText(s) {
+  return String(s ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+/**
+ * Returns { status, message, correctText }
+ * status: "correct" | "partial" | "wrong" | "unanswered" | "ungraded"
+ */
+function getFeedback(question, response) {
+  if (isResponseEmpty(response)) {
+    return { status: "unanswered", message: "No answer provided.", correctText: "" };
+  }
+
+  const options = question.options || [];
+
+  if (question.type === "multiple-choice" || question.type === "true-false") {
+    const correctText = options
+      .filter((o) => o.correct)
+      .map((o) => o.text)
+      .join(", ");
+    const isCorrect = options[response]?.correct === true;
+    return isCorrect
+      ? { status: "correct", message: "Correct!", correctText }
+      : { status: "wrong", message: "Wrong!", correctText };
+  }
+
+  if (question.type === "multiple-response") {
+    const selected = Array.isArray(response) ? response : [];
+    const correctIdx = options.map((o, i) => (o.correct ? i : -1)).filter((i) => i !== -1);
+    const correctText = correctIdx.map((i) => options[i].text).join(", ");
+
+    const hits = selected.filter((i) => correctIdx.includes(i)).length;
+    const misses = selected.length - hits;
+    const exact = hits === correctIdx.length && misses === 0;
+
+    if (exact) return { status: "correct", message: "Correct!", correctText };
+    if (hits > 0) return { status: "partial", message: "Partially Correct!", correctText };
+    return { status: "wrong", message: "Wrong!", correctText };
+  }
+
+  if (question.type === "short-answer" || question.type === "long-answer") {
+    const expected = String(question.expectedAnswer ?? "").trim();
+    if (!expected) {
+      return { status: "ungraded", message: "Submitted", correctText: "" };
+    }
+
+    const given = String(response).trim();
+    let isCorrect;
+    if (question.validationType === "number" && isFinite(Number(given)) && isFinite(Number(expected))) {
+      isCorrect = Number(given) === Number(expected);
+    } else if (/exact/i.test(question.validationMode || "")) {
+      isCorrect = normalizeText(given) === normalizeText(expected);
+    } else {
+      isCorrect = normalizeText(given).includes(normalizeText(expected));
+    }
+    return isCorrect
+      ? { status: "correct", message: "Correct!", correctText: expected }
+      : { status: "wrong", message: "Wrong!", correctText: expected };
+  }
+
+  return { status: "ungraded", message: "Submitted", correctText: "" };
+}
+
+// todo: move to styles.css or smth
+const FEEDBACK_COLORS = {
+  correct: ["#d4edda", "#155724"],
+  partial: ["#fff3cd", "#856404"],
+  wrong: ["#f8d7da", "#721c24"],
+  unanswered: ["#f8d7da", "#721c24"],
+  error: ["#f8d7da", "#721c24"],
+  neutral: ["#e2e3e5", "#383d41"],
+};
+
+function showFeedbackBox(lines, kind) {
+  const box = document.getElementById("feedback-container");
+  if (!box) return;
+  const [bg, fg] = FEEDBACK_COLORS[kind] || FEEDBACK_COLORS.neutral;
+  box.innerHTML = "";
+  (Array.isArray(lines) ? lines : [lines]).forEach((line) => {
+    const p = document.createElement("div");
+    p.textContent = line;
+    box.appendChild(p);
+  });
+  box.style.display = "block";
+  box.style.backgroundColor = bg;
+  box.style.color = fg;
+}
+
+function hideFeedbackBox() {
+  const box = document.getElementById("feedback-container");
+  if (box) box.style.display = "none";
+}
+
+function renderFeedback(question) {
+  const mode = getFeedbackMode(question);
+  const result = getFeedback(question, getSavedResponse(question));
+
+  if (mode === "none") {
+    showFeedbackBox("Submitted", "neutral");
+    return;
+  }
+
+  const lines = [result.message];
+  if (mode === "show" && result.correctText) {
+    lines.push(`Correct answer: ${result.correctText}`);
+  }
+  showFeedbackBox(lines, result.status === "ungraded" ? "neutral" : result.status);
+}
+
+// review
+
+async function showReview() {
+  const set = getSet();
+  let html = `<h1>You've finished.</h1>`;
+
+  if (!set.oneWay) {
+    html += `<p>Review your questions anytime before turning in.</p><div class="review-list">`;
+    set.questions.forEach((q, idx) => {
+      const answered = !isResponseEmpty(getSavedResponse(q));
+      html += `
+        <div class="review-item" data-index="${idx}">
+          ${q.image ? `<img src="${escapeHtml(q.image)}" alt="Question image">` : ""}
+          <div class="title"><p class="muted-text">${idx + 1}. </p>${q.required ? "* " : ""}${escapeHtml(q.text)}</div>
+          <div class="status ${answered ? "answered" : "Unanswered"}">${answered ? "Answered" : "Unanswered"}</div>
+        </div>`;
+    });
+    html += `</div><hr /><button class="cta" id="reviewBack">No, I want to go back.</button>`;
+  }
+
+  html += `<p id="review-error" style="display:none; color:#721c24;"></p>
+           <button class="btn" id="finishQuiz">Yes, proceed and turn in.</button>`;
+
+  reviewView.innerHTML = html;
+  questionView.style.display = "none";
+  completeView.style.display = "none";
+  reviewView.style.display = "block";
+
+  reviewView.querySelectorAll(".review-item").forEach((el) => {
+    el.addEventListener("click", () => goToQuestion(parseInt(el.dataset.index, 10)));
+  });
+  document.getElementById("reviewBack")?.addEventListener("click", () => showQuestion(currentIndex));
+
+  const finishBtn = document.getElementById("finishQuiz");
+  finishBtn.addEventListener("click", async () => {
+    const missing = set.questions
+      .map((q, i) => ({ q, i }))
+      .filter(({ q }) => q.required && isResponseEmpty(getSavedResponse(q)));
+    if (missing.length) {
+      const err = document.getElementById("review-error");
+      err.textContent = `Required question${missing.length > 1 ? "s" : ""} unanswered: ${missing
+        .map(({ i }) => i + 1)
+        .join(", ")}.`;
+      err.style.display = "block";
+      return;
+    }
+    finishBtn.disabled = true;
+    await renderCompleteScreen();
   });
 }
 
-function renderCompleteScreen() {
-  trackRecentSet(currentSetID);
-  const currentSet = state.sets[currentSetID];
-  const responses = state.activeSetResponses[currentSetID] || { questions: {} };
+async function renderCompleteScreen() {
+  const set = getSet();
+  const answers = state.activeSetResponses[currentSetID]?.questions || {};
 
   let correctCount = 0;
-  let totalQuestions = currentSet.questions.length;
-
+  let gradable = 0;
   let resultsHtml = `<div class="complete-results">`;
+  const attempt = [];
 
-  currentSet.questions.forEach((q, idx) => {
-    const response = responses.questions[q.id];
-    const feedback = getFeedback(q, response);
+  set.questions.forEach((q, idx) => {
+    const response = answers[q.id];
+    const fb = getFeedback(q, response);
+    const answered = !isResponseEmpty(response);
 
-    if (feedback.status === "correct") correctCount++;
+    // Ungradable questions DO NOT count toward / reveal the score
+    const counts = fb.status !== "ungraded";
+    if (counts) {
+      gradable++;
+      if (fb.status === "correct") correctCount++;
+    }
+    attempt.push({ id: q.id, response: response ?? null, status: fb.status });
 
-    let userAnsText = response === null ? "No answer" : "Unknown";
-    if (q.type === "multiple-choice" || q.type === "true-false") {
-      userAnsText = q.options[response]?.text || "No answer";
-    } else if (q.type === "multiple-response") {
-      userAnsText = Array.isArray(response)
-        ? q.options
-            .filter((_, i) => response.includes(i))
-            .map((o) => o.text)
-            .join(", ")
-        : "No answer";
-    } else {
-      userAnsText = response || "No answer";
+    let userAnsText = "No answer";
+    if (answered) {
+      if (q.type === "multiple-choice" || q.type === "true-false") {
+        userAnsText = q.options[response]?.text ?? "No answer";
+      } else if (q.type === "multiple-response") {
+        userAnsText = (q.options || [])
+          .filter((_, i) => Array.isArray(response) && response.includes(i))
+          .map((o) => o.text)
+          .join(", ");
+      } else {
+        userAnsText = String(response);
+      }
     }
 
+    let statusText;
+    let statusColor = "inherit";
+    if (!answered) {
+      statusText = "Not answered";
+    } else if (fb.status === "ungraded") {
+      statusText = "Submitted";
+    } else {
+      statusText = fb.message;
+      statusColor = fb.status === "correct" ? "green" : fb.status === "partial" ? "orange" : "red";
+    }
+    const showCorrect = fb.correctText;
+
     resultsHtml += `
-                        <div class="review-item">
-                            <div class="title">
-                                <p class="muted-text">${idx + 1}. </p>${q.text}
-                                <div style="font-size: 0.8rem; color: var(--muted);">
-                                    Your answer: ${userAnsText}
-                                </div>
-                            </div>
-                            <div class="status ${feedback.status === "correct" ? "answered" : ""}" style="color: ${feedback.status === "correct" ? "green" : feedback.status === "partial" ? "orange" : "red"}">
-                                ${feedback.message}
-                            </div>
-                        </div>
-                    `;
+      <div class="review-item">
+        <div class="title">
+          <p class="muted-text">${idx + 1}. </p>${escapeHtml(q.text)}
+          <div style="font-size: 0.8rem; color: var(--muted);">
+            Your answer: ${escapeHtml(userAnsText)}
+            ${showCorrect ? `<br>Correct answer: ${escapeHtml(fb.correctText)}` : ""}
+          </div>
+        </div>
+        <div class="status ${fb.status === "correct" && counts ? "answered" : ""}" style="color: ${statusColor}">
+          ${escapeHtml(statusText)}
+        </div>
+      </div>`;
   });
   resultsHtml += `</div>`;
 
-  const percentage = Math.round((correctCount / totalQuestions) * 100);
+  const scoreBlock =
+    gradable > 0
+      ? `<div class="score-circle" style="width:100px; height:100px; border-radius:50%; border:5px solid var(--accent); display:flex; align-items:center; justify-content:center; font-size:1.5rem; font-weight:bold; margin: 20px auto;">${Math.round((correctCount / gradable) * 100)}%</div>
+         <p style="text-align:center">${correctCount} out of ${gradable} correct</p>`
+      : `<p style="text-align:center; margin: 20px 0;">Your responses have been submitted.</p>`;
 
   completeView.innerHTML = `
-                    <h1 style="text-align:center">You've reached the end.</h1>
-                    <p style="text-align:center">You finished <b>${currentSet.name}</b> at <b>${new Date().toLocaleString("en-US", { hour12: false })}</b></p>
-                    <div class="score-circle" style="width:100px; height:100px; border-radius:50%; border:5px solid var(--accent); display:flex; align-items:center; justify-content:center; font-size:1.5rem; font-weight:bold; margin: 20px auto;">${percentage}%</div>
-                    <p style="text-align:center">${correctCount} out of ${totalQuestions} correct</p>
-                    ${resultsHtml}
-                    <div style="display:flex; justify-content:center; margin-top:20px">
-                        <a href="./index.html" class="cta">Return to Home</a>
-                    </div>
-                `;
+    <h1 style="text-align:center">You've reached the end.</h1>
+    <p style="text-align:center">You finished <b>${escapeHtml(set.name)}</b> at <b>${new Date().toLocaleString("en-US", { hour12: false })}</b></p>
+    ${scoreBlock}
+    ${resultsHtml}
+    <div style="display:flex; justify-content:center; margin-top:20px">
+      <a href="./index.html" class="cta">Return to Home</a>
+    </div>`;
 
   questionView.style.display = "none";
   reviewView.style.display = "none";
   completeView.style.display = "flex";
   completeView.style.flexDirection = "column";
   completeView.style.alignItems = "center";
+
+  // Record the attempt, then reset the in-progress bucket so a retake starts fresh
+  if (!isPreview) {
+    trackRecentSet(currentSetID);
+    const prior = Array.isArray(state.results?.[currentSetID]) ? state.results[currentSetID] : [];
+    await persist(`results.${currentSetID}`, [
+      ...prior,
+      { finishedAt: Date.now(), correct: correctCount, gradable, answers: attempt },
+    ]);
+  }
+  await persist(`activeSetResponses.${currentSetID}`, { questions: {} });
+  await persist(`activeSetSubmissions.${currentSetID}`, {});
+}
+
+function buildOptionLabel(question, opt, idx, inputType) {
+  const label = document.createElement("label");
+  label.className = "answer-option";
+
+  const input = document.createElement("input");
+  input.type = inputType;
+  if (inputType === "radio") input.name = "quiz-answer";
+  input.value = idx;
+  input.addEventListener("change", onAnswerChanged);
+
+  const text = document.createElement("span");
+  text.textContent = opt.text;
+
+  label.appendChild(input);
+  label.appendChild(text);
+
+  if (opt.image) {
+    const img = document.createElement("img");
+    img.src = opt.image;
+    img.className = "option-image";
+    img.style.maxWidth = "100px";
+    img.style.display = "block";
+    label.appendChild(img);
+  }
+  return label;
 }
 
 function renderQuestion(question) {
-  const currentSet = state.sets[currentSetID];
+  const set = getSet();
   questionContent.innerHTML = "";
 
   const container = document.createElement("div");
   container.className = "question-container";
 
   const qIndex = document.createElement("p");
-  qIndex.textContent = `${currentSet.questions.findIndex((q) => q.id === question.id) + 1}/${currentSet.questions.length}`;
+  qIndex.textContent = `${currentIndex + 1}/${set.questions.length}`;
   container.appendChild(qIndex);
 
   const qText = document.createElement("h3");
-  qText.textContent = `${question.required ? "*" : ""} ${question.text}`;
+  if (question.required) {
+    const star = document.createElement("span");
+    star.className = "required-marker";
+    star.textContent = "* ";
+    star.title = "Required";
+    qText.appendChild(star);
+  }
+  qText.appendChild(document.createTextNode(question.text));
   container.appendChild(qText);
 
   if (question.image) {
@@ -500,77 +655,25 @@ function renderQuestion(question) {
   answerContainer.className = "answer-container";
 
   if (question.type === "multiple-choice" || question.type === "true-false") {
-    question.options.forEach((opt, idx) => {
-      const label = document.createElement("label");
-      label.className = "answer-option";
-
-      const radio = document.createElement("input");
-      radio.type = "radio";
-      radio.name = "quiz-answer";
-      radio.value = idx;
-      radio.addEventListener("change", autoSave);
-
-      const text = document.createElement("span");
-      text.textContent = opt.text;
-
-      label.appendChild(radio);
-      label.appendChild(text);
-
-      if (opt.image) {
-        const img = document.createElement("img");
-        img.src = opt.image;
-        img.className = "option-image";
-        img.style.maxWidth = "100px";
-        img.style.display = "block";
-        label.appendChild(img);
-      }
-
-      answerContainer.appendChild(label);
-    });
+    (question.options || []).forEach((opt, idx) =>
+      answerContainer.appendChild(buildOptionLabel(question, opt, idx, "radio")),
+    );
   } else if (question.type === "multiple-response") {
-    question.options.forEach((opt, idx) => {
-      const label = document.createElement("label");
-      label.className = "answer-option";
-
-      const checkbox = document.createElement("input");
-      checkbox.type = "checkbox";
-      checkbox.value = idx;
-      checkbox.addEventListener("change", autoSave);
-
-      const text = document.createElement("span");
-      text.textContent = opt.text;
-
-      label.appendChild(checkbox);
-      label.appendChild(text);
-
-      if (opt.image) {
-        const img = document.createElement("img");
-        img.src = opt.image;
-        img.className = "option-image";
-        img.style.maxWidth = "100px";
-        img.style.display = "block";
-        label.appendChild(img);
-      }
-
-      answerContainer.appendChild(label);
-    });
+    (question.options || []).forEach((opt, idx) =>
+      answerContainer.appendChild(buildOptionLabel(question, opt, idx, "checkbox")),
+    );
   } else if (question.type === "short-answer") {
     const input = document.createElement("input");
     input.type = question.validationType === "number" ? "number" : "text";
     input.className = "short-answer-input";
     input.placeholder = "Your answer here...";
-    input.addEventListener("input", autoSave);
+    input.addEventListener("input", onAnswerChanged);
     answerContainer.appendChild(input);
   } else if (question.type === "long-answer") {
     const textarea = document.createElement("textarea");
     textarea.className = "long-answer-input";
     textarea.placeholder = "Your answer here...";
-    textarea.addEventListener("input", autoSave);
-    if (question.validationType === "number") {
-      textarea.oninput = function () {
-        this.value = this.value.replace(/[\\d.]/g, "");
-      };
-    }
+    textarea.addEventListener("input", onAnswerChanged);
     answerContainer.appendChild(textarea);
   }
 
@@ -587,18 +690,6 @@ function renderQuestion(question) {
   container.appendChild(feedbackDiv);
 
   questionContent.appendChild(container);
-
-  const wasSubmitted = state.activeSetSubmissions?.[currentSetID]?.[question.id];
-  const response = state.activeSetResponses?.[currentSetID]?.questions[question.id];
-  if (wasSubmitted && !isResponseEmpty(response) && question.changeable !== true) {
-    setInputsDisabled(true);
-
-    const alreadyAnsweredNotice = document.createElement("small");
-    alreadyAnsweredNotice.textContent =
-      "This question has already been answered. You cannot change it.";
-    questionContent.appendChild(alreadyAnsweredNotice);
-  }
 }
 
-// Start the app
 loadAppState();
