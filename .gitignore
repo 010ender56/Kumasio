@@ -12,3 +12,4 @@ flashcard-examples-for-importing.md
 /playwright/.cache/
 /playwright/.auth/
 .stignore
+.zed/

@@ -3,20 +3,42 @@
     <head>
         <meta charset="UTF-8" />
         <title>Kumasio</title>
-      <script type="module" crossorigin src="/assets/home-DNHVU-ml.js"></script>
-      <link rel="modulepreload" crossorigin href="/assets/lib-BEnLMY0z.js">
+      <script type="module" crossorigin src="/assets/home-CJ8AaFQG.js"></script>
+      <link rel="modulepreload" crossorigin href="/assets/lib-CTc4_zLY.js">
       <link rel="stylesheet" crossorigin href="/assets/lib-quJTPtzw.css">
-      <link rel="stylesheet" crossorigin href="/assets/home-CAcBB6G6.css">
+      <link rel="stylesheet" crossorigin href="/assets/home-Dt4DocJC.css">
     </head>
 
     <body>
+        <dialog id="set-overview">
+            <img id="set-image" src="/assets/not-found-CY0__lx1.png" alt="Set cover image" />
+
+            <h1 id="set-title">Title</h1>
+            <span class="set-type" id="set-type">${type}</span>
+            <p id="set-description">No description available.</p>
+
+            <hr />
+            <div class="overview-actions">
+                <!-- todo: maybe add a delete button, more info, etc -->
+                <button class="cta" id="practice-this-set">Practice/Play</button>
+                <button class="btn" id="edit-this-set">Edit</button>
+                <button class="btn" id="overview-close-btn">Close</button>
+            </div>
+        </dialog>
+
         <header>
             <h1 id="greeting-header">Good morning</h1>
             <p id="greeting-paragraph">Let's make today productive!</p>
         </header>
 
+        <h3>Pick off where you left off</h3>
+        <div class="quiz-grid" id="recentSets"></div>
+
+        <hr />
+
+        <h3>All Quizzes</h3>
         <div class="quiz-grid" id="quizGrid">
-            <p id="noQuizzesMsg" style="display: none">No quizzes found. Create a new one!</p>
+            <div id="noQuizzesMsg" style="display: none">No quizzes found. Create a new one!</div>
         </div>
 
         <div id="devContainer">

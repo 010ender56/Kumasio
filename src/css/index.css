@@ -95,14 +95,19 @@ body {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    transition: opacity 0.2s ease, transform 0.2s ease;
+    transition:
+        opacity 0.2s ease,
+        transform 0.2s ease;
 }
 
 .create-option-btn {
     text-align: center;
     cursor: pointer;
     background-color: var(--bg);
-    transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        background-color 0.2s ease;
 }
 
 .create-option-btn:hover {
@@ -128,6 +133,10 @@ body {
 }
 
 dialog#set-overview {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     width: min(560px, 90vw);
     height: auto;
     max-height: 90vh;

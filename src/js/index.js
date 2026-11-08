@@ -62,7 +62,7 @@ function showOverviewDialog(setID) {
     if (setData.type === "quiz" || setData.type === "devquiz") {
       window.location.href = `./quiz.html?set=${encodeURIComponent(setID)}`;
     } else if (setData.type === "flashcards") {
-      window.location.href = `./flashcards.html?set=${encodeURIComponent(setID)}`;
+      window.location.href = `./practice-selector.html?set=${encodeURIComponent(setID)}`;
     }
   });
 
@@ -127,7 +127,7 @@ async function initApp() {
       `;
 
       card.addEventListener("click", () => {
-        window.location.href = `./editor.html?set=${encodeURIComponent(currentSet)}`;
+        showOverviewDialog(key);
       });
 
       recentGridFragment.appendChild(card);
@@ -150,8 +150,6 @@ async function initApp() {
                     `;
 
       card.addEventListener("click", () => {
-        // previously: window.location.href = `./editor.html?set=${encodeURIComponent(key)}`;
-
         showOverviewDialog(key);
       });
 
