@@ -1,0 +1,24 @@
+.practice-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: calc(100vh - 40px);
+    margin: 0 auto;
+}
+
+.practice-content {
+    display: flex;
+    flex-direction: row;
+    width: 90vw;
+    height: 80vh;
+    gap: 20px;
+}
+
+.practice-pane {
+    flex: 1;
+    background: var(--card);
+    border-radius: 12px;
+    padding: 20px;
+    overflow-y: auto;
+}
