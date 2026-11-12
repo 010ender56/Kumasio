@@ -41,6 +41,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   const oneWayOnly = document.getElementById("one-way-quiz");
   const builderPanel = document.getElementById("builder-panel");
   const closeBtn = document.getElementById("edit-dialog-close");
+  const stickyBottomBar = document.querySelector(".sticky-bottom-bar");
+  const scrollToTopBtn = document.getElementById("scroll-to-top");
+  const secondaryAddQuestionBtn = document.getElementById("add-question-sticky-btn");
 
   // QUESTION TYPE CONFIG
   const QUESTION_TYPES = {
@@ -377,7 +380,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  // EVENTS
+  // event listeners
   editQuizBtn.addEventListener("click", () => {
     renderSetInfo();
     editQuizDialog.showModal();
@@ -460,6 +463,25 @@ document.addEventListener("DOMContentLoaded", async () => {
     } else {
       window.location.href = `./quiz.html?set=${state.currentSet}&preview`;
     }
+  });
+
+  scrollToTopBtn.addEventListener("click", () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  });
+
+  secondaryAddQuestionBtn.addEventListener("click", () => {
+    addQuestionBtn.click(); // me lazy
+
+    // also scroll to bottom
+    setTimeout(() => {
+      window.scrollTo({
+        top: document.body.scrollHeight,
+        behavior: 'smooth'
+      });
+    }, 100);
   });
 
   async function initApp() {

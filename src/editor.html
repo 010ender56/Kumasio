@@ -12,7 +12,14 @@
             <form class="dialog-container" method="dialog">
                 <header class="dialog-header">
                     <h3>Edit Set Info</h3>
-                    <button type="button" class="icon-btn dialog-close" id="edit-dialog-close" aria-label="Close">×</button>
+                    <button
+                        type="button"
+                        class="icon-btn dialog-close"
+                        id="edit-dialog-close"
+                        aria-label="Close"
+                    >
+                        ×
+                    </button>
                 </header>
 
                 <div class="uploader-container" id="quiz-info-uploader"></div>
@@ -70,6 +77,11 @@
             <section class="builder-panel" id="builder-panel">
                 <!-- Content injected via JS -->
             </section>
+        </div>
+
+        <div class="sticky-bottom-bar">
+            <button class="cta" id="add-question-sticky-btn">+</button>
+            <button class="btn" id="scroll-to-top">&UpArrow;</button>
         </div>
 
         <script src="/js/editor.js" type="module"></script>

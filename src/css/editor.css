@@ -291,9 +291,9 @@ dialog .uploader-container {
 }
 
 .flashcard-edit-row {
-    display: flex;
-    flex-direction: row;
-    align-items: flex-end;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 120px 40px;
+    align-items: stretch;
     gap: 15px;
     padding: 20px;
     background: var(--surface);
@@ -305,8 +305,7 @@ dialog .uploader-container {
 
 @media (max-width: 600px) {
     .flashcard-edit-row {
-        flex-direction: column;
-        align-items: stretch;
+        grid-template-columns: 1fr;
     }
 }
 
@@ -318,7 +317,6 @@ dialog .uploader-container {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    flex: 1;
 }
 
 .fc-field label {
@@ -329,17 +327,14 @@ dialog .uploader-container {
 
 .fc-field textarea {
     min-height: 60px;
-    height: 60px;
+    max-height: 200px;
+    field-sizing: content;
     padding: 8px;
     border-radius: 6px;
     border: 1px solid var(--border-main);
     background: var(--card);
     color: var(--foreground);
     resize: none;
-}
-
-.fc-image-field {
-    flex: 0 0 120px;
 }
 
 .fc-image-field .uploader-container {
@@ -352,7 +347,21 @@ dialog .uploader-container {
 }
 
 .remove-card {
-    flex: 0 0 40px;
-    height: 40px;
     border-radius: 8px;
+}
+
+.sticky-bottom-bar {
+    position: fixed;
+    bottom: 20px;
+    right: 30px;
+    width: fit-content;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    background: var(--translucent-surface);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border-main);
+    border-radius: 12px;
+    z-index: 999;
 }
