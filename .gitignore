@@ -2,8 +2,9 @@
 dist/
 node_modules/
 todo\ dev.md
-src-tauri/
 flashcard-examples-for-importing.md
+.stignore
+.zed/
 
 # Playwright
 /test-results/
@@ -11,5 +12,3 @@ flashcard-examples-for-importing.md
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
-.stignore
-.zed/
