@@ -23,6 +23,18 @@
     overflow-y: auto;
 }
 
+.analytics-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-family: inter;
+    color: var(--text);
+}
+
+.analytics-stats span {
+    padding: 5px 10px;
+}
+
 .set-actions {
     display: flex;
     flex-direction: row;
@@ -53,4 +65,44 @@
     font-size: 0.5em;
     display: block;
     margin-bottom: 8px;
+}
+
+.tab-group {
+    background-color: var(--surface);
+    padding: 10px;
+    border: 1px solid var(--border-main);
+    border-radius: 10px;
+}
+
+.toggle-group {
+    margin-bottom: 10px;
+}
+
+.chart-container {
+    position: relative;
+    width: 100%;
+    height: 60vh;
+}
+
+canvas#confidence-chart {
+    max-height: 100%;
+}
+
+.searchbar-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.searchbar-wrapper select {
+    padding: 0;
+    max-width: 20%;
+}
+
+.searchbar {
+    min-width: 150px;
+    padding: 10px;
+    border: 1px solid var(--border-main);
+    border-radius: 10px;
+    font-size: 1.2
 }

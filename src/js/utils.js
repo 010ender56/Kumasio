@@ -13,6 +13,29 @@ export function shuffle(array) {
 }
 
 /**
+ * Capitalizes the first word, or optionally, all words
+ * @param {String} str - String to capitalize.
+ * @returns {String} Capitalized string.
+ */
+export function capitalize(str, allWords = false) {
+  if (!str) return "";
+  if (!allWords) return str.charAt(0).toUpperCase() + str.slice(1);
+  return str.split(" ").map(word => capitalize(word)).join(" ");
+}
+
+/**
+ * Converts a string to a slug.
+ * @param {String} str - String to convert.
+ * @returns {String} Slugified string.
+ */
+export function slug(str) {
+  return str
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+/**
  * Calculates the Levenshtein distance between two strings.
  * Useful for fuzzy string matching.
  * @param {string} a - First string.

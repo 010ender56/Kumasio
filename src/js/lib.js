@@ -10,9 +10,9 @@ import {
   requestPermission,
   sendNotification,
 } from "@tauri-apps/plugin-notification";
-import { shuffle, distance, pluralHelper, fileToBase64 } from "./utils.js";
+import { shuffle, distance, pluralHelper, fileToBase64, capitalize } from "./utils.js";
 
-export { shuffle, distance, pluralHelper, fileToBase64 }; // these are from utils.js
+export { shuffle, distance, pluralHelper, fileToBase64, capitalize }; // these are from utils.js
 
 (() => {
   // check what environment we're in
@@ -465,6 +465,7 @@ export function generateNavbar() {
     "quiz.html": "quiz",
     "editor.html": "editor",
     "flashcards.html": "flashcards",
+    "practice-selector.html": "practice-selector",
   };
 
   const pathname = window.location.pathname;
@@ -512,11 +513,6 @@ export function loadTheme(prefs = "light") {
 
   root.setAttribute("data-theme", targetTheme);
   root.setAttribute("data-theme-mode", prefs);
-}
-
-export function capitalize(str) {
-  if (!str) return "";
-  return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
 export async function getState() {

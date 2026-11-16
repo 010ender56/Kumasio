@@ -537,7 +537,7 @@ input:checked + .theme-icon::before {
 
 small {
     font-family: inter, sans-serif;
-    font-size: 0.6rem;
+    font-size: 0.75rem;
     color: var(--muted);
 }
 
@@ -747,7 +747,7 @@ div[id="complete-view"] {
 }
 
 .toggle-group {
-    background-color: var(--card);
+    background-color: var(--surface);
     display: inline-flex;
     padding: 4px;
     border-radius: 8px;

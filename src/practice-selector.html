@@ -28,7 +28,7 @@
                     </div>
 
                     <div class="separator">Other options</div>
-                    
+
                     <div class="set-actions">
                         <button class="action-btn btn" id="take-btn" disabled>
                             Take<br />
@@ -41,7 +41,47 @@
                     </div>
                 </div>
                 <div class="practice-pane" id="right-pane">
-                    <div class="analytics"></div>
+                    <div class="toggle-group">
+                        <button class="toggle-btn active" id="overview-toggle-btn">Overview</button>
+                        <button class="toggle-btn" id="confidence-toggle-btn">Confidence</button>
+                        <button class="toggle-btn" id="card-list-toggle-btn">Card List</button>
+                    </div>
+
+                    <div class="analytics">
+                        <div class="tab-group" id="overview-tab">
+                            <div class="analytics-stats">
+                                <span id="analytics-count">0 total flashcards</span>
+                                <span id="analytics-rating1">0 flashcards to study</span>
+                                <span id="analytics-rating5">0 flashcards mastered</span>
+                                <span id="analytics-notAttempted">0 cards which haven't been practiced</span>
+                            </div>
+                        </div>
+
+                        <div class="tab-group hidden" id="confidence-tab">
+                            <div class="chart-container">
+                                <canvas id="confidence-chart">
+                            </div>
+                        </div>
+
+                        <div class="tab-group hidden" id="card-list-tab">
+                            <div class="searchbar-wrapper">
+                                <select>
+                                    <option value="all" selected>All</option>
+                                    <option value="not-practiced">Not practiced</option>
+                                    <option value="bad">Learning</option>
+                                    <option value="good">Mastered</option>
+                                </select>
+                                <input type="text" placeholder="Search for your cards..." class="searchbar">
+                                <button class="danger" id="clear">&#8999;</button>
+                            </div>
+
+                            <div class="card-list">
+                                
+                            </div>
+                            
+                            <small id="no-card-results">No results found.</small>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

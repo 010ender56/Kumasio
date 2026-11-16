@@ -1,17 +1,14 @@
 import {
   loadTheme,
-  createImageUploader,
-  fileToBase64,
-  createSetTemplate,
-  initState,
   getState,
-  saveFullState,
   updateState,
   trackRecentSet,
-  pluralHelper,
   generateNavbar,
   shuffle,
   matchShortcut,
+  showToast,
+  messageDialog,
+  confirmationDialog,
 } from "./lib.js";
 
 const nav = generateNavbar();
@@ -30,9 +27,10 @@ const rate5Btn = document.getElementById("rate-5");
 const finishedScreen = document.getElementById("finished-screen");
 const statConfidence = document.getElementById("stat-confidence");
 const statMastered = document.getElementById("stat-mastered");
+const statEffort = document.getElementById("stat-effort");
 const restartAllBtn = document.getElementById("restart-all-btn");
 const focusTroubleBtn = document.getElementById("focus-trouble-btn");
-const takeQuizBtn = document.getElementById("pratice-quiz-btn");
+const takeQuizBtn = document.getElementById("practice-quiz-btn"); // todo: NEED TO WIRE UP
 const cramUndoBtn = document.getElementById("cram-undo-btn");
 const shuffleBtn = document.getElementById("shuffle-btn");
 
@@ -42,33 +40,110 @@ const rated5CardsCount = document.getElementById("rated-5-cards");
 const rated3CardsCount = document.getElementById("rated-3-cards");
 const rated1CardsCount = document.getElementById("rated-1-cards");
 
-let state;
-let currentSetID = new URLSearchParams(window.location.search).get("set");
-let currentCardIndex = 0;
-let sessionQuestions = []; // session-local ordering for review mode
-let cramQueue = []; // stores card IDs for cram mode
-let sessionAttempts = 0; // track total cards seen in current session
-let sessionHistory = []; // track actions for undoing in cram mode
-let sessionCounts = {
-  1: 0,
-  3: 0,
-  5: 0,
-};
-let sessionRepeatedCards = new Set(); // track cards already pushed back in cram mode
+const REQUEUE_GAP = 4; // a missed card comes back after this many other cards
+const MAX_HISTORY = 30; // ratings kept per card
+const TROUBLE_WINDOW = 5; // look at the last N ratings of a card...
+const TROUBLE_MISSES = 2; // ...and call it a "trouble card" if this many were misses
 
-const mode = new URLSearchParams(window.location.search).get("mode") || "review"; // default to review mode
 /*
 mode is one of:
 - review: skim through your cards, no SRS, flip + go
-- cram: cards are shown based on your performance, buttons for "I know, I don't know", but not true SRS
-- srs: spaced repetition system, cards are shown based on your performance, buttons for "I know, Need pratice, I don't know", true SRS
+- cram: keep going until you've answered every card correctly; missed cards come back soon
+- srs: spaced repetition (in dev)
 */
+const params = new URLSearchParams(window.location.search);
+const currentSetID = params.get("set");
+const mode = params.get("mode") || "review";
+
+let state;
+let currentSet;
+let originalOrder = [];
+let cardsById = new Map();
+let currentCard = null; // null when finished or empty
+let isShuffled = false;
+
+let progress = {};
+
+// review mode
+let sessionQuestions = [];
+let currentCardIndex = 0;
+
+// cram mode
+let cramQueue = []; // card IDs still to be answered, correctly
+let cramTotal = 0; // cards in cram round
+let cramDone = new Set(); // cards answered correctly (this round)
+let sessionRatings = new Map(); // cardId
+let sessionAttempts = 0;
+let sessionHistory = []; // for undo
+
+let saveChain = Promise.resolve();
+let hasTrackedSession = false;
 
 let defaultSide;
-let flipDirection;
-let reducedMotion;
 let shortcuts;
 
+function persistProgress() {
+  const snapshot = JSON.parse(JSON.stringify(progress));
+  saveChain = saveChain
+    .then(() => updateState(`flashcardsProgress.${currentSetID}`, snapshot))
+    .catch((err) => {
+      console.error("Failed to save progress:", err);
+      showToast("error", "Couldn't save your progress.");
+    });
+  return saveChain;
+}
+
+function trackSession() {
+  if (hasTrackedSession) return;
+  hasTrackedSession = true;
+  saveChain = saveChain
+    .then(() => trackRecentSet(currentSetID))
+    .catch((err) => console.error("Failed to track recent set:", err));
+}
+
+// helpers
+function confirmAsk(message) {
+  return new Promise((resolve) => {
+    confirmationDialog({ message }, () => resolve(true), () => resolve(false));
+  });
+}
+
+function getHistory(id) {
+  return progress[id]?.history || [];
+}
+
+function lastRating(id) {
+  const h = getHistory(id);
+  return h.length ? h[h.length - 1] : undefined;
+}
+
+function isMastered(id) {
+  return lastRating(id) === 5;
+}
+
+// missed (rated 1) at least TROUBLE_MISSES times in the last TROUBLE_WINDOW tries
+function isTrouble(id) {
+  const recent = getHistory(id).slice(-TROUBLE_WINDOW);
+  return recent.filter((r) => r === 1).length >= TROUBLE_MISSES;
+}
+
+function tallyRatings() {
+  const counts = { 1: 0, 3: 0, 5: 0 };
+  for (const r of sessionRatings.values()) {
+    if (r in counts) counts[r]++;
+  }
+  return counts;
+}
+
+function showCardUI() {
+  finishedScreen.classList.add("hidden");
+  flashcard.classList.remove("hidden");
+  if (mode === "cram") ratingControls.classList.remove("hidden");
+}
+
+// ---------------------------------------------------------------------------
+// Init
+// ---------------------------------------------------------------------------
 async function loadAppState() {
   try {
     state = await getState();
@@ -76,27 +151,34 @@ async function loadAppState() {
     await initApp();
   } catch (err) {
     console.error("Error loading state:", err);
+    showToast("error", "Couldn't load this set.");
   }
 }
 
 async function initApp() {
-  let currentSet = state.sets[currentSetID];
+  currentSet = state.sets[currentSetID];
   if (!currentSet) {
-    alert("Set not found!");
+    await messageDialog("Set not found!", { kind: "error" });
     window.location.href = "./index.html";
     return;
   }
 
-  sessionQuestions = [...currentSet.questions];
-  defaultSide = state.userPrefs.defaultSide || "front";
+  originalOrder = [...(currentSet.questions || [])];
+  cardsById = new Map(originalOrder.map((q) => [q.id, q]));
+  progress = JSON.parse(JSON.stringify(state.flashcardsProgress?.[currentSetID] || {}));
+
+  document.title = currentSet.name || "Untitled";
+
+  if (originalOrder.length === 0) {
+    await messageDialog("This set doesn't have any cards yet.", { kind: "info" });
+    window.location.href = "./index.html";
+    return;
+  }
 
   // apply settings
+  defaultSide = state.userPrefs.defaultSide || "front";
   const direction = state.userPrefs.flipDirection || "horizontal";
-  if (direction === "vertical") {
-    flashcard.classList.add("flip-vertical");
-  } else {
-    flashcard.classList.add("flip-horizontal");
-  }
+  flashcard.classList.add(direction === "vertical" ? "flip-vertical" : "flip-horizontal");
 
   if (state.userPrefs.reducedMotion) {
     flashcard.classList.add("no-animation");
@@ -104,43 +186,30 @@ async function initApp() {
 
   shortcuts = state.userPrefs.shortcuts || {};
 
-  document.title = currentSet.name || "Untitled";
-
   if (mode === "cram") {
     // CRAM
-
     rated3CardsCount.classList.add("hidden");
     document.querySelector(".controls").classList.add("hidden");
     ratingControls.classList.remove("hidden");
 
-    // init cram queue: all cards that aren't "known" (last rating is not 5)
-    const progress = state.flashcardsProgress?.[currentSetID] || {};
-    cramQueue = currentSet.questions
-      .filter((q) => {
-        const p = progress[q.id];
-        if (!p || !p.history || p.history.length === 0) return true;
-        return p.history[p.history.length - 1] !== 5;
-      })
-      .map((q) => q.id);
-
-    if (cramQueue.length === 0) {
-      alert("You've mastered all cards in this set!");
-    } else {
-      loadCardById(cramQueue[0], "next");
+    // start with unmastered cards
+    let ids = originalOrder.filter((q) => !isMastered(q.id)).map((q) => q.id);
+    if (ids.length === 0) {
+      ids = originalOrder.map((q) => q.id);
+      showToast("success", "Great job! Every card has been mastered. We'll start from the beginning.");
     }
+    startCramSession(ids);
   } else if (mode === "review") {
     // REVIEW
-
-    document.querySelector(".card-counts").classList.add("hidden"); // review does not require card counts
+    document.querySelector(".card-counts").classList.add("hidden"); // review has no ratings
     document.querySelector(".controls").classList.remove("hidden");
     ratingControls.classList.add("hidden");
+
+    sessionQuestions = [...originalOrder];
     loadCardAt(0);
   } else if (mode === "srs") {
     // SRS (in dev)
   }
-
-  // update count displays
-  updateCountDisplay();
 }
 
 function switchSideTo(side) {
@@ -151,27 +220,17 @@ function switchSideTo(side) {
   }
 }
 
-function loadCardAt(index, direction = "next") {
-  if (index < 0 || index >= sessionQuestions.length) {
-    return;
-  }
-
-  currentCardIndex = index;
-  const card = sessionQuestions[index];
-  renderCard(card, direction);
+function resetSideInstantly(side) {
+  const els = [flashcard, ...flashcard.querySelectorAll("*")];
+  els.forEach((el) => (el.style.transition = "none"));
+  switchSideTo(side);
+  void flashcard.offsetWidth; // flush styles
+  els.forEach((el) => (el.style.transition = ""));
 }
 
-function loadCardById(id, direction = "next") {
-  const index = sessionQuestions.findIndex((q) => q.id === id);
+function renderCard(card, direction = "next") {
+  currentCard = card;
 
-  if (index === -1) return;
-
-  currentCardIndex = index;
-  const card = sessionQuestions[index];
-  renderCard(card, direction);
-}
-
-function renderCard(card, direction) {
   if (!state.userPrefs.reducedMotion) {
     flashcard.classList.remove("slide-in-next", "slide-in-prev");
     void flashcard.offsetWidth; // trigger reflow
@@ -183,258 +242,249 @@ function renderCard(card, direction) {
     cardImage.src = card.image;
   } else {
     cardImage.classList.add("hidden");
+    cardImage.removeAttribute("src");
   }
 
   cardFront.textContent = card.text || "No front text";
   cardBack.textContent = card.expectedAnswer || "No back text";
 
-  // reset to default side
-  switchSideTo(defaultSide);
+  resetSideInstantly(defaultSide);
+  updateCountDisplay();
 }
 
 function updateCountDisplay() {
-  const totalLength = state.sets[currentSetID].questions.length;
-  
-  // Use currentCardIndex + 1 to reflect the current card number instead of the 0-based index
+  if (mode === "cram") {
+    const done = cramDone.size;
+    progressBarEl.setAttribute("max", Math.max(cramTotal, 1));
+    progressBarEl.setAttribute("value", done);
+    progressTextEl.textContent =
+      cramTotal > 0
+        ? `${Math.round((done / cramTotal) * 100)}% | ${cramQueue.length} to go`
+        : "";
+
+    const counts = tallyRatings();
+    rated1CardsCount.textContent = counts[1];
+    rated3CardsCount.textContent = counts[3];
+    rated5CardsCount.textContent = counts[5];
+    return;
+  }
+
+  const total = sessionQuestions.length;
+  if (total === 0) {
+    progressTextEl.textContent = "";
+    return;
+  }
+  progressBarEl.setAttribute("max", total);
   progressBarEl.setAttribute("value", currentCardIndex + 1);
-  progressBarEl.setAttribute("max", totalLength);
-  progressTextEl.textContent = `${Math.round(((currentCardIndex + 1) / totalLength) * 100)}% | Card ${currentCardIndex + 1} of ${totalLength}`;
-  
-  rated1CardsCount.textContent = sessionCounts[1];
-  rated3CardsCount.textContent = sessionCounts[3];
-  rated5CardsCount.textContent = sessionCounts[5];
+  progressTextEl.textContent = `${Math.round(((currentCardIndex + 1) / total) * 100)}% | Card ${currentCardIndex + 1} of ${total}`;
 }
 
 function flipCard() {
-  trackRecentSet(currentSetID);
+  if (!currentCard) return;
+  trackSession();
   flashcard.classList.toggle("flipped");
 }
 
-async function showFinishedScreen() {
-  trackRecentSet(currentSetID);
-  const set = state.sets[currentSetID];
-  const progress = state.flashcardsProgress?.[currentSetID] || {};
+// review mode
+function loadCardAt(index, direction = "next") {
+  if (index < 0 || index >= sessionQuestions.length) return;
+  currentCardIndex = index;
+  renderCard(sessionQuestions[index], direction);
+}
 
-  const totalCards = set.questions.length;
-  const masteredCards = set.questions.filter((q) => {
-    const p = progress[q.id];
-    return p && p.history && p.history.length > 0 && p.history[p.history.length - 1] === 5;
-  }).length;
+// cram mode
+function startCramSession(ids) {
+  cramQueue = isShuffled ? shuffle([...ids]) : [...ids];
+  cramTotal = ids.length;
+  cramDone = new Set();
+  sessionRatings = new Map();
+  sessionAttempts = 0;
+  sessionHistory = [];
+
+  showCardUI();
+  showNextCramCard("next");
+}
+
+function showNextCramCard(direction) {
+  if (cramQueue.length === 0) {
+    showFinishedScreen();
+    return;
+  }
+  renderCard(cardsById.get(cramQueue[0]), direction);
+}
+
+function showFinishedScreen() {
+  currentCard = null;
+
+  const totalCards = originalOrder.length;
+  const masteredCards = originalOrder.filter((q) => isMastered(q.id)).length;
   const confidence = totalCards > 0 ? Math.round((masteredCards / totalCards) * 100) : 0;
 
   statConfidence.textContent = `${confidence}%`;
   statMastered.textContent = `${masteredCards}/${totalCards}`;
-  document.getElementById("stat-effort").textContent = sessionAttempts;
+  statEffort.textContent = sessionAttempts;
 
   flashcard.classList.add("hidden");
   ratingControls.classList.add("hidden");
   document.querySelector(".controls").classList.add("hidden");
   finishedScreen.classList.remove("hidden");
-}
-
-async function undoCramAction() {
-  if (sessionHistory.length === 0) return;
-
-  const lastAction = sessionHistory.pop();
-
-  // undo session count changes
-  if (lastAction.newRating && sessionCounts.hasOwnProperty(lastAction.newRating)) {
-    sessionCounts[lastAction.newRating]--;
-  }
-  if (lastAction.previousRating && sessionCounts.hasOwnProperty(lastAction.previousRating)) {
-    sessionCounts[lastAction.previousRating]++;
-  }
   updateCountDisplay();
-
-  const currentProgress = state.flashcardsProgress?.[currentSetID] || {};
-  const updatedProgress = { ...currentProgress };
-  const cardProgress = { ...currentProgress[lastAction.cardId] };
-  
-  if (cardProgress.history) {
-    cardProgress.history = [...cardProgress.history];
-    cardProgress.history.pop();
-  }
-
-  if (!cardProgress.history || cardProgress.history.length === 0) {
-    delete updatedProgress[lastAction.cardId];
-  } else {
-    updatedProgress[lastAction.cardId] = cardProgress;
-  }
-
-  state = await updateState(`flashcardsProgress.${currentSetID}`, updatedProgress);
-
-  // restore
-  cramQueue = lastAction.queueBefore;
-  sessionAttempts--;
-  sessionRepeatedCards.delete(lastAction.cardId);
-
-  // and load
-  loadCardById(lastAction.cardId, "prev");
 }
 
-async function handleRating(rating) {
-  trackRecentSet(currentSetID);
-  const set = state.sets[currentSetID];
-  const card = set.questions[currentCardIndex];
-  if (!card) return;
+function handleRating(rating) {
+  if (mode !== "cram" || !currentCard) return;
+  trackSession();
 
-  // save
-  const currentProgress = state.flashcardsProgress?.[currentSetID] || {};
-  const cardProgress = currentProgress[card.id] || {};
-  const history = cardProgress.history || [];
-  const prevRating = history.length > 0 ? history[history.length - 1] : undefined;
+  const id = currentCard.id;
+  const prevEntry = progress[id]
+    ? { ...progress[id], history: [...(progress[id].history || [])] }
+    : undefined;
 
+  // remember everything needed to undo this
   sessionHistory.push({
-    cardId: card.id,
-    newRating: rating,
-    previousRating: prevRating,
-    timestamp: cardProgress.last_practiced,
+    cardId: id,
+    prevEntry,
+    prevSessionRating: sessionRatings.get(id),
     queueBefore: [...cramQueue],
   });
 
-  sessionAttempts++;
-
-  // update session counts
-  if (prevRating && sessionCounts.hasOwnProperty(prevRating)) {
-    sessionCounts[prevRating]--;
-  }
-  if (sessionCounts.hasOwnProperty(rating)) {
-    sessionCounts[rating]++;
-  }
-  updateCountDisplay();
-
-  // save: update with history array
-  const updatedProgress = {
-    ...currentProgress,
-    [card.id]: {
-      history: [...history, rating],
-      last_practiced: Date.now(),
-    },
+  // save (in memory right away, to storage in the background)
+  progress[id] = {
+    history: [...(prevEntry?.history || []), rating].slice(-MAX_HISTORY),
+    last_practiced: Date.now(),
   };
+  persistProgress();
 
-  state = await updateState(`flashcardsProgress.${currentSetID}`, updatedProgress);
+  sessionAttempts++;
+  sessionRatings.set(id, rating);
 
-  if (mode === "cram") {
-    // if they know it, remove from queue. Otherwise, move to end.
-    const currentCardId = card.id;
-    cramQueue = cramQueue.filter((id) => id !== currentCardId);
-
-    if (rating === 1 && !sessionRepeatedCards.has(currentCardId)) {
-      cramQueue.push(currentCardId);
-      sessionRepeatedCards.add(currentCardId);
-    }
-
-    if (cramQueue.length === 0) {
-      await showFinishedScreen();
-    } else {
-      loadCardById(cramQueue[0], "next");
-    }
+  // I know = done for this round
+  // Don't know = will come back a few cards later until I know
+  cramQueue = cramQueue.filter((q) => q !== id);
+  if (rating === 5) {
+    cramDone.add(id);
   } else {
-    nextBtn.click();
+    cramQueue.splice(Math.min(REQUEUE_GAP, cramQueue.length), 0, id);
+  }
+
+  showNextCramCard("next");
+}
+
+function undoCramAction() {
+  if (mode !== "cram" || sessionHistory.length === 0) return;
+  const action = sessionHistory.pop();
+
+  if (action.prevEntry) {
+    progress[action.cardId] = action.prevEntry;
+  } else {
+    delete progress[action.cardId];
+  }
+  persistProgress();
+  
+  if (action.prevSessionRating === undefined) {
+    sessionRatings.delete(action.cardId);
+  } else {
+    sessionRatings.set(action.cardId, action.prevSessionRating);
+  }
+  cramQueue = action.queueBefore;
+  cramDone.delete(action.cardId);
+  sessionAttempts--;
+
+  showCardUI(); // works from the finished screen too
+  renderCard(cardsById.get(action.cardId), "prev");
+}
+
+function applyShuffleToReview() {
+  if (!currentCard) return;
+  if (isShuffled) {
+    // keep already seen and the current card, but shuffle the rest
+    const seen = sessionQuestions.slice(0, currentCardIndex);
+    const rest = sessionQuestions.slice(currentCardIndex + 1);
+    sessionQuestions = [...seen, currentCard, ...shuffle([...rest])];
+  } else {
+    sessionQuestions = [...originalOrder];
+    currentCardIndex = sessionQuestions.findIndex((q) => q.id === currentCard.id);
   }
 }
 
+function applyShuffleToCram() {
+  if (cramQueue.length === 0) return;
+  const [first, ...rest] = cramQueue;
+  if (isShuffled) {
+    cramQueue = [first, ...shuffle([...rest])];
+  } else {
+    const order = new Map(originalOrder.map((q, i) => [q.id, i]));
+    rest.sort((a, b) => order.get(a) - order.get(b));
+    cramQueue = [first, ...rest];
+  }
+}
+
+shuffleBtn.addEventListener("click", () => {
+  isShuffled = !isShuffled;
+  shuffleBtn.classList.toggle("active", isShuffled);
+  shuffleBtn.setAttribute("aria-pressed", String(isShuffled));
+
+  if (mode === "review") {
+    applyShuffleToReview();
+  } else if (mode === "cram") {
+    applyShuffleToCram();
+  }
+  updateCountDisplay();
+});
+
 // event listeners
 nextBtn.addEventListener("click", () => {
-  if (currentCardIndex < (sessionQuestions.length || 0) - 1) {
+  if (!currentCard) return;
+  trackSession();
+
+  if (currentCardIndex < sessionQuestions.length - 1) {
     loadCardAt(currentCardIndex + 1, "next");
   } else {
-    trackRecentSet(currentSetID);
-    alert("You've reached the end of the deck!");
+    messageDialog("You've reached the end of the deck!", { kind: "info" });
   }
-
-  updateCountDisplay();
 });
 
 prevBtn.addEventListener("click", () => {
   if (currentCardIndex > 0) {
     loadCardAt(currentCardIndex - 1, "prev");
   }
-
-  updateCountDisplay();
 });
 
 undoBtn.addEventListener("click", () => {
   if (currentCardIndex > 0) {
     loadCardAt(currentCardIndex - 1, "prev");
   }
-
-  updateCountDisplay();
 });
 
 restartAllBtn.addEventListener("click", async () => {
-  // reset
-  state = await updateState(`flashcardsProgress.${currentSetID}`, {});
-  sessionAttempts = 0;
-  sessionHistory = [];
-  sessionCounts = { 1: 0, 3: 0, 5: 0 };
-  updateCountDisplay();
+  const ok = await confirmAsk("This clears your saved progress for this set and starts over. Continue?");
+  if (!ok) return;
 
-  // restart
-  finishedScreen.classList.add("hidden");
-  flashcard.classList.remove("hidden");
-  ratingControls.classList.remove("hidden");
-
-  const currentSet = state.sets[currentSetID];
-  cramQueue = currentSet.questions.map((q) => q.id);
-  loadCardById(cramQueue[0], "next");
+  progress = {};
+  persistProgress();
+  startCramSession(originalOrder.map((q) => q.id));
 });
 
 focusTroubleBtn.addEventListener("click", async () => {
-  const set = state.sets[currentSetID];
-  const progress = state.flashcardsProgress?.[currentSetID] || {};
+  const troubleIds = originalOrder.filter((q) => isTrouble(q.id)).map((q) => q.id);
 
-  // ONLY cards answered with "I don't know" (rating 1) in the past two times
-  const troubleCards = set.questions
-    .filter((q) => {
-      const p = progress[q.id];
-      if (!p || !p.history || p.history.length < 2) return false;
-      return p.history[p.history.length - 1] === 1 && p.history[p.history.length - 2] === 1;
-    })
-    .map((q) => q.id);
-
-  if (troubleCards.length === 0) {
-    alert("No trouble cards to focus on!");
+  if (troubleIds.length === 0) {
+    await messageDialog("No trouble cards to focus on!", { kind: "info" });
     return;
   }
 
-  sessionAttempts = 0;
-  sessionHistory = [];
-  sessionRepeatedCards.clear();
-  sessionCounts = { 1: 0, 3: 0, 5: 0 };
-  updateCountDisplay();
-
-  // restart w/ trouble cards
-  finishedScreen.classList.add("hidden");
-  flashcard.classList.remove("hidden");
-  ratingControls.classList.remove("hidden");
-
-  cramQueue = troubleCards;
-  loadCardById(cramQueue[0], "next");
-});
-
-shuffleBtn.addEventListener("click", () => {
-  if (mode === "review") {
-    const fixed = sessionQuestions.slice(0, currentCardIndex);
-    const remaining = sessionQuestions.slice(currentCardIndex);
-    const shuffled = shuffle(remaining);
-    sessionQuestions = [...fixed, ...shuffled];
-    loadCardAt(currentCardIndex, "next");
-  } else if (mode === "cram") {
-    cramQueue = shuffle(cramQueue);
-    if (cramQueue.length > 0) {
-      loadCardById(cramQueue[0], "next");
-    }
-  }
+  startCramSession(troubleIds);
 });
 
 rate1Btn.addEventListener("click", () => handleRating(1));
 rate5Btn.addEventListener("click", () => handleRating(5));
 cramUndoBtn.addEventListener("click", undoCramAction);
 
+flashcard.addEventListener("click", flipCard);
+
 // keyboard shortcuts
 document.body.addEventListener("keydown", (e) => {
-  // first, ignore if typing in a field
+  // ignore if typing in a field
   if (
     e.target.tagName === "INPUT" ||
     e.target.tagName === "TEXTAREA" ||
@@ -442,6 +492,10 @@ document.body.addEventListener("keydown", (e) => {
   ) {
     return;
   }
+
+  if (e.repeat) return;
+
+  if (!shortcuts) return; // still loading
 
   const key = e.key;
 
@@ -468,8 +522,6 @@ document.body.addEventListener("keydown", (e) => {
     }
   }
 });
-
-document.querySelector(".flashcard").addEventListener("click", flipCard);
 
 // init
 loadAppState();

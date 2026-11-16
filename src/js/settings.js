@@ -166,14 +166,23 @@ async function initApp() {
         case "flashcards":
           window.location.href = `./flashcards.html?set=${backSet}`;
           break;
+        case "practice-selector":
+          window.location.href = `./practice-selector.html?set=${backSet}`;
+          break;
         default:
           window.location.href = "./index.html";
       }
     };
 
+    // turn the URL human-friendly
+    let humanFriendlyPageName = backUrl.includes("?") ? backUrl.split("?")[0] : backUrl; // remove the URL queries
+    humanFriendlyPageName = humanFriendlyPageName.includes("-") ? humanFriendlyPageName.split("-").join(" ") : humanFriendlyPageName; // remove hyphens
+    humanFriendlyPageName = capitalize(humanFriendlyPageName, true); // finally, capitalize the string in title case
+    
     document.getElementById("back").textContent =
-      `Back to ${capitalize(backUrl.includes("?") ? backUrl.split("?")[0] : backUrl)}`;
+      `Back to ${humanFriendlyPageName}`;
   } else {
+    // no match found, redirect the user to the homepage
     document.getElementById("back").textContent = "Back to Home";
     document.getElementById("back").onclick = () => {
       window.location.href = "./index.html";
