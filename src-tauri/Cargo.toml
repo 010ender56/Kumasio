@@ -1,0 +1,40 @@
+[package]
+name = "kumasio"
+version = "0.4.0"
+description = "A study app"
+authors = ["010ender56"]
+license = "MIT"
+repository = "https://github.com/010ender56/Kumasio"
+edition = "2024"
+rust-version = "1.90"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true   
+
+[lib]
+name = "app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.7.3", features = [] }
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+log = "0.4"
+tauri = { version = "2.12.4", features = [] }
+tauri-plugin-log = "2"
+tauri-plugin-dialog = "2.8.3"
+tauri-plugin-notification = "2.7.0"
+tauri-plugin-fs = "2.7.1"
+tauri-plugin-clipboard-manager = "2.5.0"
+tauri-plugin-sql = { version = "2", features = ["sqlite"] }
+tauri-plugin-store = "2"
+store = "0.1.0-alpha.3"
+
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-window-state = "2"
