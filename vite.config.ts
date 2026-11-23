@@ -14,6 +14,8 @@ export default defineConfig({
         quiz: resolve(import.meta.dirname, "src/quiz.html"),
         import: resolve(import.meta.dirname, "src/import.html"),
         settings: resolve(import.meta.dirname, "src/settings.html"),
+        flashcards: resolve(import.meta.dirname, "src/flashcards.html"),
+        practiceSelector: resolve(import.meta.dirname, "src/practice-selector.html"),
       },
     },
   },
