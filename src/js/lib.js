@@ -10,6 +10,8 @@ import {
   requestPermission,
   sendNotification,
 } from "@tauri-apps/plugin-notification";
+import { save as saveDialog } from "@tauri-apps/plugin-dialog";
+import { writeTextFile, writeFile } from "@tauri-apps/plugin-fs";
 import { shuffle, distance, pluralHelper, fileToBase64, capitalize } from "./utils.js";
 
 export { shuffle, distance, pluralHelper, fileToBase64, capitalize }; // these are from utils.js
@@ -86,23 +88,41 @@ async function dbSet(key, value) {
   );
 }
 
-export function save(filename, data, fileType = "text/html") {
-  try {
-    const blob = new Blob([data], {
-      type: fileType,
+export async function save(filename, data, fileType = "text/html", method = null) {
+  const resolvedMethod = method ?? (globalThis.ENV === "tauri" ? "tauri" : "web");
+
+  if (resolvedMethod === "tauri") {
+    const filePath = await saveDialog({
+      defaultPath: filename,
     });
-    const elem = window.document.createElement("a");
 
-    elem.href = window.URL.createObjectURL(blob);
+    if (!filePath) return;
+
+    if (typeof data === "string") {
+      await writeTextFile(filePath, data);
+    } else {
+      let bytes;
+      if (data instanceof Blob) {
+        bytes = new Uint8Array(await data.arrayBuffer());
+      } else if (data instanceof ArrayBuffer) {
+        bytes = new Uint8Array(data);
+      } else {
+        bytes = data;
+      }
+      await writeFile(filePath, bytes);
+    }
+  } else {
+    const blob = data instanceof Blob ? data : new Blob([data], { type: fileType });
+    const url = window.URL.createObjectURL(blob);
+    const elem = document.createElement("a");
+
+    elem.href = url;
     elem.download = filename;
-
     document.body.appendChild(elem);
     elem.click();
+    elem.remove();
 
-    document.body.removeChild(elem);
-    window.URL.revokeObjectURL(elem.href);
-  } catch (error) {
-    throw error;
+    setTimeout(() => window.URL.revokeObjectURL(url), 1000);
   }
 }
 
