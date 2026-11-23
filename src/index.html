@@ -15,9 +15,13 @@
             <span class="set-type" id="set-type">${type}</span>
             <p id="set-description">No description available.</p>
 
+            <div class="set-actions">
+                <button class="danger" id="delete-set" aria-label="Delete this set" title="Delete this set. Cannot be undone."><i data-lucide="trash"></i></button>
+                <button class="btn" id="export-set" aria-label="Export this set" title="Export this set."><i data-lucide="download"></i></button>
+            </div>
+
             <hr />
             <div class="overview-actions">
-                <!-- todo: maybe add a delete button, more info, etc -->
                 <button class="cta" id="practice-this-set">Practice/Play</button>
                 <button class="btn" id="edit-this-set">Edit</button>
                 <button class="btn" id="overview-close-btn">Close</button>

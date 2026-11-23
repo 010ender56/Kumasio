@@ -121,6 +121,12 @@ body {
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
+.set-actions button {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: flex-start;
+}
+
 #devContainer {
     border: 2px dashed var(--border-main);
     border-radius: 8px;
@@ -175,20 +181,6 @@ dialog#set-overview h1#set-title {
     font-weight: 600;
     line-height: 1.25;
     margin: 0;
-}
-
-.set-type {
-    display: inline-block;
-    width: fit-content;
-    font-family: inter, sans-serif;
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    background-color: var(--surface);
-    border-radius: 4px;
-    padding: 2px 8px;
 }
 
 dialog#set-overview #set-description {

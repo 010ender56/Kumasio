@@ -12,6 +12,7 @@ import {
   showToast,
   trackRecentSet,
 } from "./lib.js";
+import { createIcons, Trash, Download } from 'lucide';
 
 const nav = generateNavbar();
 document.body.prepend(nav);
@@ -33,9 +34,12 @@ const overviewDialogPracticeBtn = document.getElementById("practice-this-set");
 const overviewSetName = document.getElementById("set-title");
 const overviewSetDescription = document.getElementById("set-description");
 const overviewSetType = document.getElementById("set-type");
+const deleteSetBtn = document.getElementById("delete-set");
+const exportSetBtn = document.getElementById("export-set");
 
 let state;
 let sneezes = 0;
+let currentSet = 0;
 
 function showOverviewDialog(setID) {
   if (!setID) throw new Error("need setID to open the overview dialog");
@@ -68,6 +72,9 @@ function showOverviewDialog(setID) {
 
   // show the dialog
   overviewDialog.showModal();
+
+  // update
+  currentSet = setID;
 }
 
 async function initApp() {
@@ -99,6 +106,13 @@ async function initApp() {
       break;
   }
 
+  createIcons({
+    icons: {
+      Trash,
+      Download
+    }
+  });
+
   // now we can load the quizzes
   state = await getState();
 
@@ -120,9 +134,9 @@ async function initApp() {
       card.setAttribute("data-set", currentSet);
 
       card.innerHTML = `
-        <img src="${image || "assets/placeholder.png"}" alt="Picture for ${name || "Untitled"}">
+        <img src="${image || "assets/not-found.png"}" alt="Picture for ${name || "Untitled"}">
         <span class="quiz-title">${name || "Untitled Set"}</span>
-        <span class="set-type">${type}</span>
+        <span class="badge">${type}</span>
         <p class="quiz-desc">${description || "No description available."}</p>
       `;
 
@@ -143,9 +157,9 @@ async function initApp() {
       const { image, name, type, description } = currentSet;
 
       card.innerHTML = `
-                      <img src="${image || "assets/placeholder.png"}" alt="Picture for ${name}">
+                      <img src="${image || "assets/not-found.png"}" alt="Picture for ${name}">
                       <span class="quiz-title">${name}</span>
-                      <span class="set-type">${type}</span>
+                      <span class="badge">${type}</span>
                       <p class="quiz-desc">${description}</p>
                     `;
 
@@ -183,6 +197,14 @@ async function initApp() {
 
   overviewDialogCloseBtn.addEventListener("click", () => {
     overviewDialog.close();
+  });
+
+  deleteSetBtn.addEventListener("click", () => {
+    window.location.href = `./editor.html?set=${currentSet}&action=delete`;
+  });
+
+  exportSetBtn.addEventListener("click", () => {
+    window.location.href = `./editor.html?set=${currentSet}&action=export`;
   });
 
   // dev tools
