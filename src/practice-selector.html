@@ -65,18 +65,18 @@
 
                         <div class="tab-group hidden" id="card-list-tab">
                             <div class="searchbar-wrapper">
-                                <select>
+                                <select id="card-filter">
                                     <option value="all" selected>All</option>
                                     <option value="not-practiced">Not practiced</option>
-                                    <option value="bad">Learning</option>
-                                    <option value="good">Mastered</option>
+                                    <option value="learning">Learning</option>
+                                    <option value="mastered">Mastered</option>
                                 </select>
-                                <input type="text" placeholder="Search for your cards..." class="searchbar">
-                                <button class="danger" id="clear">&#8999;</button>
+                                <input type="text" placeholder="Search for your cards..." class="searchbar" id="card-search">
+                                <button class="danger" id="card-clear">&#8999;</button>
                             </div>
 
                             <div class="card-list">
-                                
+                                <!-- injected via JS -->
                             </div>
                             
                             <small id="no-card-results">No results found.</small>

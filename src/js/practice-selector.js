@@ -7,6 +7,7 @@ import {
   generateNavbar,
   notification,
 } from "./lib.js";
+import { distance } from "./utils.js";
 import Chart from "chart.js/auto";
 import ChartDataLabels from "chartjs-plugin-datalabels";
 
@@ -27,6 +28,12 @@ const tabSwitchGroup = document.querySelector(".toggle-group");
 const toOverviewBtn = document.getElementById("overview-toggle-btn");
 const toConfidenceBtn = document.getElementById("confidence-toggle-btn");
 const toCardListBtn = document.getElementById("card-list-toggle-btn");
+
+const cardSearchFilter = document.getElementById("card-filter");
+const cardSearchEl = document.getElementById("card-search");
+const cardClearBtn = document.getElementById("card-clear");
+const cardResults = document.querySelector(".card-list");
+const noResultsText = document.getElementById("no-card-results");
 
 async function initApp() {
   state = await getState();
@@ -61,7 +68,7 @@ async function initApp() {
       }
     });
 
-    // char.js register plugins
+    // chart.js register plugins
     Chart.register(ChartDataLabels);
 
     document.getElementById("analytics-count").textContent = `${totalCards} total flashcards`;
@@ -97,6 +104,9 @@ async function initApp() {
         },
       },
     });
+
+    // pre-load the card list
+    displayCards(set.questions);
   }
 }
 
@@ -132,6 +142,63 @@ function switchToTab(tab) {
   document.getElementById(tab).classList.remove("hidden");
 }
 
+function displayCards(cards, filterBy = "all") {
+  cardResults.innerHTML = ""; // clear
+
+  if (cards.length === 0) {
+    noResultsText.classList.remove("hidden");
+    return;
+  }
+
+  cards.forEach((card) => {
+    cardResults.innerHTML += `
+      <div class="card">
+        <h3>${card.text}</h3>
+        <p>${card.expectedAnswer}</p>
+      </div>
+    `;
+  });
+
+  noResultsText.classList.add("hidden");
+}
+
+function getCardFilterStatus(card, progress) {
+  const cardProgress = progress[card.id];
+  if (!cardProgress || !cardProgress.history || cardProgress.history.length === 0) {
+    return "not-practiced";
+  }
+  const lastRating = cardProgress.history[cardProgress.history.length - 1];
+  if (lastRating === 1) {
+    return "learning";
+  } else if (lastRating === 5) {
+    return "mastered";
+  }
+  return "all";
+}
+
+function fuzzySearchCards(query, cards, progress) {
+  const threshold = 3;
+  const lowerQuery = query.toLowerCase();
+
+  return cards.filter((card) => {
+    const cardText = card.text.toLowerCase();
+    const cardAnswer = card.expectedAnswer.toLowerCase();
+
+    if (cardText.includes(lowerQuery) || cardAnswer.includes(lowerQuery)) {
+      return true;
+    }
+
+    const textDistance = distance(cardText, lowerQuery);
+    const answerDistance = distance(cardAnswer, lowerQuery);
+
+    if (textDistance <= threshold || answerDistance <= threshold) {
+      return true;
+    }
+
+    return false;
+  });
+}
+
 // event listeners
 cramAction.addEventListener("click", () => {
   window.location.href = `/flashcards.html?set=${setID}&mode=cram`;
@@ -153,6 +220,53 @@ toConfidenceBtn.addEventListener("click", (e) => {
 });
 toCardListBtn.addEventListener("click", (e) => {
   changeActiveButton(e.target.id);
+});
+
+cardClearBtn.addEventListener("click", () => {
+  cardSearchEl.value = "";
+  
+});
+
+cardSearchFilter.addEventListener("change", (e) => {
+  const selectedFilter = e.target.value;
+
+  // re-eval
+  const searchQuery = cardSearchEl.value.toLowerCase();
+  const progress = state.flashcardsProgress?.[setID] || {};
+  let searchQueryCards = [];
+
+  if (searchQuery) {
+    searchQueryCards = fuzzySearchCards(searchQuery, set.questions, progress);
+  } else {
+    searchQueryCards = set.questions;
+  }
+
+  const filteredCards = searchQueryCards.filter((card) => {
+    const cardStatus = getCardFilterStatus(card, progress);
+    return selectedFilter === "all" || cardStatus === selectedFilter;
+  });
+
+  displayCards(filteredCards, selectedFilter);
+});
+
+cardSearchEl.addEventListener("input", (e) => {
+  const searchQuery = e.target.value.toLowerCase();
+  const progress = state.flashcardsProgress?.[setID] || {};
+  let filteredCards = [];
+
+  if (searchQuery) {
+    filteredCards = fuzzySearchCards(searchQuery, set.questions, progress);
+  } else {
+    filteredCards = set.questions;
+  }
+
+  const selectedFilter = cardSearchFilter.value;
+  const finalCards = filteredCards.filter((card) => {
+    const cardStatus = getCardFilterStatus(card, progress);
+    return selectedFilter === "all" || cardStatus === selectedFilter;
+  });
+
+  displayCards(finalCards, selectedFilter);
 });
 
 await initApp();
