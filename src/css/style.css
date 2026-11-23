@@ -634,6 +634,7 @@ hr {
 .toast {
     padding: 16px 24px;
     border-radius: 8px;
+    font-family: inter;
     font-size: 14px;
     font-weight: 500;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -677,9 +678,8 @@ hr {
     justify-content: center;
     align-items: center;
     border-radius: 6px;
-    width: 80vw;
     min-height: 40px;
-    padding: 40px;
+    padding: 50px;
     text-align: center;
 }
 
@@ -775,6 +775,25 @@ div[id="complete-view"] {
     background-color: var(--surface-darker);
     color: var(--accent);
     font-weight: 600;
+}
+
+.badge {
+    display: inline-block;
+    width: fit-content;
+    font-family: inter, sans-serif;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    background-color: var(--surface);
+    border-radius: 4px;
+    padding: 2px 8px;
+}
+
+.badge.special {
+    background-color: var(--accent);
+    color: var(--text);
 }
 
 .hidden {

@@ -8,11 +8,21 @@ import {
   saveFullState,
   updateState,
   generateNavbar,
+  save,
 } from "./lib.js";
+import { createIcons, Trash, Download } from 'lucide';
+import Papa from 'papaparse';
 
 document.addEventListener("DOMContentLoaded", async () => {
   const nav = generateNavbar();
   document.body.prepend(nav);
+
+  createIcons({
+    icons: {
+      Trash,
+      Download
+    }
+  });
 
   // STATE
   let state = await getState();
@@ -37,6 +47,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const quizTypeSelect = document.getElementById("quiz-type");
   const saveQuizInfoBtn = document.getElementById("save-quiz-info");
   const deleteSetBtn = document.getElementById("delete-set");
+  const exportSetBtn = document.getElementById("export-set");
   const quizOnlyOptions = document.getElementById("quiz-only-options");
   const oneWayOnly = document.getElementById("one-way-quiz");
   const builderPanel = document.getElementById("builder-panel");
@@ -44,6 +55,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   const stickyBottomBar = document.querySelector(".sticky-bottom-bar");
   const scrollToTopBtn = document.getElementById("scroll-to-top");
   const secondaryAddQuestionBtn = document.getElementById("add-question-sticky-btn");
+
+  // EXPORT DIALOG ELEMENTS
+  const exportSetDialog = document.getElementById("export-set-dialog");
+  const exportFormatSelect = document.getElementById("export-format");
+  const exportOptions = document.getElementById("export-options");
+  const cardSeparatorRow = document.getElementById("card-separator-row");
+  const termSepInput = document.getElementById("term-sep");
+  const cardSepInput = document.getElementById("card-sep");
+  const exportDownloadBtn = document.getElementById("export-download");
+  const exportDialogCloseBtn = document.getElementById("export-dialog-close");
 
   // QUESTION TYPE CONFIG
   const QUESTION_TYPES = {
@@ -484,9 +505,90 @@ document.addEventListener("DOMContentLoaded", async () => {
     }, 100);
   });
 
+  exportSetBtn.addEventListener("click", () => {
+    exportSetDialog.showModal();
+  });
+
+  exportDialogCloseBtn.addEventListener("click", () => {
+    exportSetDialog.close();
+  });
+
+  exportFormatSelect.addEventListener("change", () => {
+    if (exportFormatSelect.value === "csv") {
+      cardSeparatorRow.classList.add("hidden");
+      exportOptions.classList.remove("hidden");
+    } else if (exportFormatSelect.value === "text") {
+      cardSeparatorRow.classList.remove("hidden");
+      exportOptions.classList.remove("hidden");
+    } else {
+      exportOptions.classList.add("hidden");
+    }
+  });
+
+  exportDownloadBtn.addEventListener("click", async () => {
+    const format = exportFormatSelect.value;
+    const termSep = termSepInput.value || ";";
+    const cardSep = cardSepInput.value || ",";
+    const safeName = state.sets[state.currentSet].name.replace(/[\\/:*?"<>|]/g, '_');
+    const filename = `${safeName}.${format === "text" ? "txt" : format}`;
+    const questions = getQuestions();
+
+    if (format === "json") {
+      // json
+      
+      const data = {
+        questions: questions.map(q => ({
+          id: q.id,
+          type: q.type,
+          text: q.text,
+          expectedAnswer: q.expectedAnswer,
+          options: q.options || [],
+        }))
+      };
+      
+      await save(filename, JSON.stringify(data, null, 2), "application/json");
+    } else if (format === "csv") {
+      // csv
+      
+      const rows = questions
+        .filter(q => q.type === "flashcard")
+        .map(q => ({ question: q.text || "", answer: q.expectedAnswer || "" }));
+      
+      const csvString = Papa.unparse(rows, {
+        header: true,
+        delimiter: termSep, // def: ;
+        newline: "\n"
+      });
+      
+      await save(filename, csvString, "text/csv");
+    } else {
+      // plain text
+      
+      const cards = questions
+        .filter(q => q.type === "flashcard")
+        .map(q => `${q.text || ""}${termSep}${q.expectedAnswer || ""}`)
+        .join(cardSep);
+      
+      await save(filename, cards, "text/plain");
+    }
+  });
+
   async function initApp() {
     loadTheme(state.userPrefs.theme);
     const setParam = new URLSearchParams(window.location.search).get("set");
+    const setActions = new URLSearchParams(window.location.search).get("action");
+
+    if (setActions) {
+      switch (setActions) {
+        case "delete":
+          deleteSetBtn.click();
+          break;
+        case "export":
+          exportSetBtn.click();
+          break;
+      }
+    }
+    
     if (setParam) {
       state.currentSet = setParam;
     } else {
@@ -505,6 +607,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!state.sets[state.currentSet].questions?.length) {
       state.sets[state.currentSet].questions = [createQuestion(state.sets[state.currentSet].type === "flashcards" ? "flashcard" : "multiple-choice")];
       await saveState();
+    }
+
+    // properly disable export options that aren't compatible with this set type
+    if (state.sets[state.currentSet].type === "quiz") {
+      // quiz sets cannot be exported in CSV or plain text
+      
+      document.querySelector("#export-format option[value=csv]").disabled = true;
+      document.querySelector("#export-format option[value=text]").disabled = true;
     }
 
     renderSetInfo();

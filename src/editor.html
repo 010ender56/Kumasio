@@ -55,7 +55,9 @@
                 </div>
 
                 <footer class="dialog-actions">
-                    <button class="btn danger" id="delete-set" type="button">Delete Set</button>
+                    <button class="btn danger" id="delete-set" type="button" aria-label="Delete this set" title="Delete this set. Cannot be undone."><i data-lucide="trash"></i></button>
+                    
+                    <button class="btn" id="export-set" type="button" aria-label="Export this set" title="Export this set."><i data-lucide="download"></i></button>
                     <button class="cta" id="save-quiz-info" type="submit">Save Changes</button>
                 </footer>
             </form>
@@ -85,5 +87,45 @@
         </div>
 
         <script src="/js/editor.js" type="module"></script>
+        <dialog id="export-set-dialog">
+            <form class="dialog-container" method="dialog">
+                <header class="dialog-header">
+                    <h3>Export Set</h3>
+                    <button
+                        type="button"
+                        class="icon-btn dialog-close"
+                        id="export-dialog-close"
+                        aria-label="Close"
+                    >
+                        ×
+                    </button>
+                </header>
+
+                <div class="field-group">
+                    <label for="export-format">Format</label>
+                    <select id="export-format">
+                        <option value="json">JSON</option>
+                        <option value="csv">CSV (comma separated values)</option>
+                        <option value="text">Plain</option>
+                    </select>
+                </div>
+
+                <div id="export-options" class="hidden field-group">
+                    <div class="row">
+                        <label for="term-sep">Term‑Definition Separator</label>
+                        <input type="text" id="term-sep" placeholder="," />
+                    </div>
+                    <div class="row" id="card-separator-row">
+                        <label for="card-sep">Card Separator</label>
+                        <input type="text" id="card-sep" placeholder="," />
+                    </div>
+                </div>
+
+                <footer class="dialog-actions">
+                    <button class="btn" id="export-download" type="button">Download</button>
+                </footer>
+            </form>
+        </dialog>
+
     </body>
 </html>

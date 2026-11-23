@@ -231,6 +231,11 @@ dialog h3 {
     color: var(--text);
 }
 
+#export-set-dialog {
+    width: fit-content;
+    height: fit-content;
+}
+
 .field-group {
     display: flex;
     flex-direction: column;
@@ -272,9 +277,14 @@ dialog#edit-set-dialog {
     margin-top: 0.5rem;
 }
 
+.dialog-actions #delete-set {
+    margin-right: auto;
+    width: min-content;
+}
+
 .dialog-actions .btn,
 .dialog-actions .cta {
-    flex: 1;
+    min-width: fit-content;
     max-width: 200px;
 }
 
